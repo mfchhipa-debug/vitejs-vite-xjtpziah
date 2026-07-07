@@ -1,4 +1,4 @@
-name: Firebase Hosting
+name: Deploy to Firebase
 on:
   push:
     branches:
@@ -14,4 +14,3 @@ jobs:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_CHHIPA_SAMAJ_JAIPUR }}'
           projectId: chhipa-samaj-jaipur
-          
