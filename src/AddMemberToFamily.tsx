@@ -104,7 +104,7 @@ export default function AddMemberToFamily() {
         fontWeight: 'bold',
         fontFamily: "'Poppins', 'Noto Sans', sans-serif"
       }}>
-        {isOpen ? '▲ 2. सदस्य जोड़ें' : '▼ 2. सदस्य जोड़ें'}
+        {isOpen ? '▲ 2. सदस्य' : '▼ 2. सदस्य'}
       </button>
 
       {isOpen && (

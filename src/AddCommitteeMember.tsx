@@ -75,7 +75,7 @@ export default function AddCommitteeMember() {
         fontWeight: 'bold',
         fontFamily: "'Poppins', 'Noto Sans', sans-serif"
       }}>
-        {isOpen ? '▲ 3. कमेटी पदाधिकारी' : '▼ 3. कमेटी पदाधिकारी'}
+        {isOpen ? '▲ 3. कमेटी' : '▼ 3. कमेटी'}
       </button>
 
       {isOpen && (

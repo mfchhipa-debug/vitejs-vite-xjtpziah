@@ -110,7 +110,7 @@ export default function AddFamilyHead() {
           fontFamily: "'Poppins', 'Noto Sans', sans-serif"
         }}
       >
-        {isOpen ? '▲ 1. नया परिवार (मुखिया)' : '▼ 1. नया परिवार (मुखिया)'}
+        {isOpen ? '▲ 1. परिवार' : '▼ 1. परिवार'}
       </button>
 
       {isOpen && (
