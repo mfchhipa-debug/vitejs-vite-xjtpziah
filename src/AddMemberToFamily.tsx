@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { db } from './firebaseConfig';
+import { db, storage } from './firebaseConfig';
 import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const OPTIONS = {
   gotras: ["कश्यप", "गर्ग", "भारद्वाज", "वशिष्ठ", "अत्रि", "विश्वमित्र", "अन्य"],
@@ -14,8 +15,10 @@ const OPTIONS = {
 };
 
 export default function AddMemberToFamily() {
-  const [isOpen, setIsOpen] = useState(false); // फॉर्म छिपाने/खोलने के लिए बटन स्टेट
+  const [isOpen, setIsOpen] = useState(false);
   const [heads, setHeads] = useState<any[]>([]);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     familyID: '', memberNo: '', name: '', fatherName: '', gotra: '',
     relationToHead: '', dob: '', age_years: '', age_months: '',
@@ -44,100 +47,204 @@ export default function AddMemberToFamily() {
     setFormData({ ...formData, dob: dobValue, age_years: years.toString(), age_months: months.toString() });
   };
 
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPhotoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setPhotoPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.familyID) { alert("कृपया Family ID चुनें!"); return; }
     try {
-      await addDoc(collection(db, 'members'), { ...formData, isHead: false, createdAt: new Date() });
-      alert('सदस्य सफलतापूर्वक जोड़ दिया गया!');
-      setFormData({ familyID: '', memberNo: '', name: '', fatherName: '', gotra: '', relationToHead: '', dob: '', age_years: '', age_months: '', gender: '', bloodGroup: '', maritalStatus: '', education: '', occupation: '', villageCity: '', area: '', address: '', mobile: '', isStudent: false });
-      setIsOpen(false); // सबमिट होने के बाद फॉर्म बंद हो जाएगा
-    } catch (error) { console.error('Error: ', error); }
+      let photoURL = '';
+      if (photoFile) {
+        const storageRef = ref(storage, `member_photos/${formData.familyID}_${Date.now()}`);
+        await uploadBytes(storageRef, photoFile);
+        photoURL = await getDownloadURL(storageRef);
+      }
+      await addDoc(collection(db, 'members'), { ...formData, isHead: false, photoURL, createdAt: new Date() });
+      alert('✅ सदस्य सफलतापूर्वक जोड़ दिया गया!');
+      setFormData({
+        familyID: '', memberNo: '', name: '', fatherName: '', gotra: '',
+        relationToHead: '', dob: '', age_years: '', age_months: '',
+        gender: '', bloodGroup: '', maritalStatus: '', education: '', occupation: '',
+        villageCity: '', area: '', address: '', mobile: '', isStudent: false
+      });
+      setPhotoFile(null); setPhotoPreview(null); setIsOpen(false);
+    } catch (error) {
+      console.error(error);
+      alert('❌ कुछ गड़बड़ हुई, कृपया पुनः प्रयास करें।');
+    }
+  };
+
+  const inputStyle = {
+    width: '100%',
+    padding: '10px',
+    borderRadius: '6px',
+    border: '1px solid #cbd5e1',
+    boxSizing: 'border-box' as const,
+    fontSize: '14px'
   };
 
   return (
-    <div className="form-card">
-      {/* बटन: क्लिक करने पर फॉर्म खुलेगा/बंद होगा */}
-      <button 
-        onClick={() => setIsOpen(!isOpen)} 
-        style={{ padding: '15px', width: '100%', background: '#667eea', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold' }}
-      >
-        {isOpen ? '▲ सदस्य जोड़ने का फॉर्म बंद करें' : '▼ 2. सदस्य जोड़ें (क्लिक करें)'}
+    <div style={{
+      background: 'white', padding: '20px', borderRadius: '12px',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+      width: '100%', maxWidth: '500px', margin: '0 auto', boxSizing: 'border-box'
+    }}>
+      <button onClick={() => setIsOpen(!isOpen)} style={{
+        padding: '15px', width: '100%', background: '#3b82f6', color: 'white',
+        border: 'none', borderRadius: '8px', cursor: 'pointer',
+        fontSize: '18px',   // ⬅️ बड़ा किया
+        fontWeight: 'bold',
+        fontFamily: "'Poppins', 'Noto Sans', sans-serif"
+      }}>
+        {isOpen ? '▲ 2. सदस्य जोड़ें' : '▼ 2. सदस्य जोड़ें'}
       </button>
 
-      {/* अगर isOpen 'true' है, तभी फॉर्म दिखेगा */}
       {isOpen && (
-        <div style={{ marginTop: '20px', padding: '20px', border: '1px solid #28a745', borderRadius: '8px' }}>
-          <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '10px' }}>
-            <select value={formData.familyID} onChange={(e) => setFormData({...formData, familyID: e.target.value})} required>
-              <option value="">Family ID चुनें</option>
+        <form onSubmit={handleSubmit} style={{ marginTop: '20px' }}>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>
+              📸 सदस्य की फोटो (वैकल्पिक)
+            </label>
+            <input type="file" accept="image/*" onChange={handlePhotoChange}
+              style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px', background: '#f8fafc' }} />
+            {photoPreview && <img src={photoPreview} alt="Preview" style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px', marginTop: '10px', border: '2px solid #3b82f6' }} />}
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>Family ID चुने <span style={{ color: 'red' }}>*</span></label>
+            <select value={formData.familyID} onChange={(e) => setFormData({...formData, familyID: e.target.value})} required style={inputStyle}>
+              <option value="">-- Family ID चुनें --</option>
               {heads.map(h => <option key={h.id} value={h.familyID}>{h.familyID} - {h.name} का परिवार</option>)}
             </select>
+          </div>
 
-            <input placeholder="सदस्य क्रमांक" value={formData.memberNo} onChange={(e) => setFormData({...formData, memberNo: e.target.value})} />
-            <input placeholder="नाम" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} required />
-            <input placeholder="पिता/पति का नाम" value={formData.fatherName} onChange={(e) => setFormData({ ...formData, fatherName: e.target.value })} />
-            
-            <select value={formData.gotra} onChange={(e) => setFormData({...formData, gotra: e.target.value})}>
-              <option value="">गोत्र</option>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>सदस्य क्रमांक</label>
+            <input type="text" placeholder="जैसे: 01, 02, 03..." value={formData.memberNo} onChange={(e) => setFormData({...formData, memberNo: e.target.value})} style={inputStyle} />
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>नाम <span style={{ color: 'red' }}>*</span></label>
+            <input type="text" placeholder="पूरा नाम" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} required style={inputStyle} />
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>पिता/पति का नाम</label>
+            <input type="text" placeholder="पिता या पति का नाम" value={formData.fatherName} onChange={(e) => setFormData({...formData, fatherName: e.target.value})} style={inputStyle} />
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>गोत्र</label>
+            <select value={formData.gotra} onChange={(e) => setFormData({...formData, gotra: e.target.value})} style={inputStyle}>
+              <option value="">-- गोत्र चुनें --</option>
               {OPTIONS.gotras.map(g => <option key={g} value={g}>{g}</option>)}
             </select>
+          </div>
 
-            <select value={formData.relationToHead} onChange={(e) => setFormData({...formData, relationToHead: e.target.value})}>
-              <option value="">संबंध</option>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>संबंध (मुखिया से)</label>
+            <select value={formData.relationToHead} onChange={(e) => setFormData({...formData, relationToHead: e.target.value})} style={inputStyle}>
+              <option value="">-- संबंध चुनें --</option>
               {OPTIONS.relations.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
+          </div>
 
-            <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
-              <span style={{ fontSize: '14px', color: '#555' }}>DOB:</span>
-              <input type="date" value={formData.dob} onChange={handleDobChange} required style={{ flex: 1 }} />
-              <input placeholder="साल" type="number" style={{ width: '70px', background: '#f0f0f0' }} value={formData.age_years} readOnly />
-              <input placeholder="महीने" type="number" style={{ width: '70px', background: '#f0f0f0' }} value={formData.age_months} readOnly />
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>जन्म तिथि (DOB) <span style={{ color: 'red' }}>*</span></label>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input type="date" value={formData.dob} onChange={handleDobChange} required style={{ flex: 2, ...inputStyle }} />
+              <input type="number" placeholder="साल" value={formData.age_years} readOnly style={{ flex: 1, background: '#f0f0f0', ...inputStyle }} />
+              <input type="number" placeholder="महीने" value={formData.age_months} readOnly style={{ flex: 1, background: '#f0f0f0', ...inputStyle }} />
             </div>
+            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>(उम्र स्वतः कैलकुलेट होगी)</div>
+          </div>
 
-            <select value={formData.gender} onChange={(e) => setFormData({...formData, gender: e.target.value})}>
-              <option value="">लिंग</option>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>लिंग</label>
+            <select value={formData.gender} onChange={(e) => setFormData({...formData, gender: e.target.value})} style={inputStyle}>
+              <option value="">-- लिंग चुनें --</option>
               {OPTIONS.genders.map(g => <option key={g} value={g}>{g}</option>)}
             </select>
+          </div>
 
-            <select value={formData.maritalStatus} onChange={(e) => setFormData({...formData, maritalStatus: e.target.value})}>
-              <option value="">वैवाहिक स्थिति</option>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>वैवाहिक स्थिति</label>
+            <select value={formData.maritalStatus} onChange={(e) => setFormData({...formData, maritalStatus: e.target.value})} style={inputStyle}>
+              <option value="">-- वैवाहिक स्थिति चुनें --</option>
               {OPTIONS.maritalStatuses.map(m => <option key={m} value={m}>{m}</option>)}
             </select>
+          </div>
 
-            <input placeholder="शिक्षा" value={formData.education} onChange={(e) => setFormData({...formData, education: e.target.value})} />
-            
-            <select value={formData.occupation} onChange={(e) => setFormData({...formData, occupation: e.target.value})}>
-              <option value="">व्यवसाय</option>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>शिक्षा</label>
+            <input type="text" placeholder="जैसे: B.A., M.Sc., 12वीं" value={formData.education} onChange={(e) => setFormData({...formData, education: e.target.value})} style={inputStyle} />
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>व्यवसाय</label>
+            <select value={formData.occupation} onChange={(e) => setFormData({...formData, occupation: e.target.value})} style={inputStyle}>
+              <option value="">-- व्यवसाय चुनें --</option>
               {OPTIONS.occupations.map(o => <option key={o} value={o}>{o}</option>)}
             </select>
+          </div>
 
-            <select value={formData.villageCity} onChange={(e) => setFormData({...formData, villageCity: e.target.value})}>
-              <option value="">गाँव/शहर</option>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>गाँव/शहर</label>
+            <select value={formData.villageCity} onChange={(e) => setFormData({...formData, villageCity: e.target.value})} style={inputStyle}>
+              <option value="">-- गाँव/शहर चुनें --</option>
               {OPTIONS.villageCity.map(v => <option key={v} value={v}>{v}</option>)}
             </select>
+          </div>
 
-            <select value={formData.area} onChange={(e) => setFormData({...formData, area: e.target.value})}>
-              <option value="">एरिया</option>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>एरिया / कॉलोनी</label>
+            <select value={formData.area} onChange={(e) => setFormData({...formData, area: e.target.value})} style={inputStyle}>
+              <option value="">-- एरिया चुनें --</option>
               {OPTIONS.areas.map(a => <option key={a} value={a}>{a}</option>)}
             </select>
+          </div>
 
-            <input placeholder="पूरा पता" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
-            <input placeholder="मोबाइल" value={formData.mobile} onChange={(e) => setFormData({...formData, mobile: e.target.value})} />
-            
-            <select value={formData.bloodGroup} onChange={(e) => setFormData({...formData, bloodGroup: e.target.value})}>
-              <option value="">ब्लड ग्रुप (Blood Group)</option>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>पूरा पता</label>
+            <input type="text" placeholder="मकान नंबर, गली, मोहल्ला" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} style={inputStyle} />
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>मोबाइल नंबर</label>
+            <input type="tel" placeholder="10 अंकों का नंबर" value={formData.mobile} onChange={(e) => setFormData({...formData, mobile: e.target.value})} style={inputStyle} />
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>ब्लड ग्रुप (Blood Group)</label>
+            <select value={formData.bloodGroup} onChange={(e) => setFormData({...formData, bloodGroup: e.target.value})} style={inputStyle}>
+              <option value="">-- ब्लड ग्रुप चुनें --</option>
               {OPTIONS.bloodGroups.map(bg => <option key={bg} value={bg}>{bg}</option>)}
             </select>
+          </div>
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <input type="checkbox" checked={formData.isStudent} onChange={(e) => setFormData({...formData, isStudent: e.target.checked})} /> 
-              क्या छात्र हैं?
+          <div style={{ marginBottom: '24px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+              <input type="checkbox" checked={formData.isStudent} onChange={(e) => setFormData({...formData, isStudent: e.target.checked})} style={{ width: '18px', height: '18px' }} />
+              <span style={{ fontWeight: 'bold', color: '#334155' }}>क्या छात्र हैं?</span>
             </label>
-            
-            <button type="submit" style={{ padding: '10px', background: '#28a745', color: 'white', border: 'none', cursor: 'pointer' }}>सबमिट करें</button>
-          </form>
-        </div>
+          </div>
+
+          <button type="submit" style={{
+            width: '100%', padding: '14px', background: 'linear-gradient(135deg, #667eea, #764ba2)',
+            color: 'white', border: 'none', borderRadius: '8px', fontSize: '18px',
+            fontWeight: 'bold', cursor: 'pointer'
+          }}>
+            ✅ सदस्य सबमिट करें
+          </button>
+        </form>
       )}
     </div>
   );

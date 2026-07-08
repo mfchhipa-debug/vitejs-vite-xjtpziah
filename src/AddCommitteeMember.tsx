@@ -1,70 +1,130 @@
 import { useState } from 'react';
-import { db } from './firebaseConfig';
+import { db, storage } from './firebaseConfig';
 import { collection, addDoc } from 'firebase/firestore';
-
-const DESIGNATIONS = ["अध्यक्ष", "उपाध्यक्ष", "सचिव", "सह-सचिव", "कोषाध्यक्ष", "कार्यकारिणी सदस्य", "सलाहकार", "अन्य"];
-const GOTRAS = ["कश्यप", "गर्ग", "भारद्वाज", "वशिष्ठ", "अन्य"]; 
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export default function AddCommitteeMember() {
-  const [isOpen, setIsOpen] = useState(false); // फॉर्म खोलने/बंद करने के लिए स्टेट
-  const [formData, setFormData] = useState({
-    designation: '', name: '', fatherName: '', gotra: '', familyID: '', mobile: '', tenure: '2026-2027', notes: ''
-  });
+  const [isOpen, setIsOpen] = useState(false);
+  const [designation, setDesignation] = useState('');
+  const [name, setName] = useState('');
+  const [gotra, setGotra] = useState('');
+  const [mobile, setMobile] = useState('');
+  const [tenure, setTenure] = useState('');
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name || !formData.designation) {
-      alert("कृपया नाम और पद दोनों अवश्य भरें!");
-      return;
-    }
-    try {
-      await addDoc(collection(db, 'committee'), { ...formData, createdAt: new Date() });
-      alert('कमेटी पदाधिकारी सफलतापूर्वक नियुक्त कर दिए गए! 🎉');
-      setFormData({ designation: '', name: '', fatherName: '', gotra: '', familyID: '', mobile: '', tenure: '2026-2027', notes: '' });
-      setIsOpen(false); // सबमिट करने के बाद फॉर्म बंद हो जाएगा
-    } catch (error) {
-      console.error("Error: ", error);
-      alert("डेटा सुरक्षित करने में समस्या आई!");
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPhotoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setPhotoPreview(reader.result as string);
+      reader.readAsDataURL(file);
     }
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!designation || !name) {
+      alert('कृपया पद और नाम भरें!');
+      return;
+    }
+    setLoading(true);
+    try {
+      let photoURL = '';
+      if (photoFile) {
+        const storageRef = ref(storage, `committee_photos/${designation}_${Date.now()}`);
+        await uploadBytes(storageRef, photoFile);
+        photoURL = await getDownloadURL(storageRef);
+      }
+      await addDoc(collection(db, 'committee'), {
+        designation, name, gotra: gotra || '', mobile: mobile || '',
+        tenure: tenure || '', photoURL, createdAt: new Date().toISOString()
+      });
+      alert('✅ पदाधिकारी सफलतापूर्वक जोड़ा गया!');
+      setDesignation(''); setName(''); setGotra(''); setMobile(''); setTenure('');
+      setPhotoFile(null); setPhotoPreview(null); setIsOpen(false);
+    } catch (error) {
+      console.error(error);
+      alert('❌ कुछ गड़बड़ हुई, कृपया पुनः प्रयास करें।');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const inputStyle = {
+    width: '100%',
+    padding: '10px',
+    borderRadius: '6px',
+    border: '1px solid #cbd5e1',
+    boxSizing: 'border-box' as const,
+    fontSize: '14px'
+  };
+
   return (
-    <div className="form-card">
-      {/* बटन: क्लिक करने पर फॉर्म खुलेगा/बंद होगा */}
-      <button 
-        onClick={() => setIsOpen(!isOpen)} 
-        style={{ padding: '12px', width: '100%', background: '#ff9800', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
-      >
-        {isOpen ? '▲ 3. कमेटी फॉर्म बंद करें' : '▼ 3. समाज कमेटी पदाधिकारी जोड़ें (कार्यकारिणी)'}
+    <div style={{
+      background: 'white', padding: '20px', borderRadius: '12px',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+      width: '100%', maxWidth: '500px', margin: '0 auto', boxSizing: 'border-box'
+    }}>
+      <button onClick={() => setIsOpen(!isOpen)} style={{
+        padding: '15px', width: '100%', background: '#f59e0b', color: 'white',
+        border: 'none', borderRadius: '8px', cursor: 'pointer',
+        fontSize: '18px',   // ⬅️ बड़ा किया
+        fontWeight: 'bold',
+        fontFamily: "'Poppins', 'Noto Sans', sans-serif"
+      }}>
+        {isOpen ? '▲ 3. कमेटी पदाधिकारी' : '▼ 3. कमेटी पदाधिकारी'}
       </button>
 
-      {/* अगर isOpen 'true' है, तभी फॉर्म दिखेगा */}
       {isOpen && (
-        <div style={{ marginTop: '20px', padding: '20px', border: '1px solid #ff9800', borderRadius: '8px', background: '#fffcf9' }}>
-          <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '10px' }}>
-            <select value={formData.designation} onChange={(e) => setFormData({...formData, designation: e.target.value})} required style={{ padding: '8px' }}>
-              <option value="">-- पद / दायित्व चुनें * --</option>
-              {DESIGNATIONS.map(d => <option key={d} value={d}>{d}</option>)}
-            </select>
-            
-            <input placeholder="पदाधिकारी का नाम *" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} required style={{ padding: '8px' }} />
-            <input placeholder="पिता/पति का नाम" value={formData.fatherName} onChange={(e) => setFormData({...formData, fatherName: e.target.value})} style={{ padding: '8px' }} />
-            
-            <select value={formData.gotra} onChange={(e) => setFormData({...formData, gotra: e.target.value})} style={{ padding: '8px' }}>
-              <option value="">-- गोत्र चुनें --</option>
-              {GOTRAS.map(g => <option key={g} value={g}>{g}</option>)}
-            </select>
+        <form onSubmit={handleSubmit} style={{ marginTop: '20px' }}>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>
+              📸 पदाधिकारी की फोटो (वैकल्पिक)
+            </label>
+            <input type="file" accept="image/*" onChange={handlePhotoChange}
+              style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px', background: '#f8fafc' }} />
+            {photoPreview && <img src={photoPreview} alt="Preview" style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px', marginTop: '10px', border: '2px solid #f59e0b' }} />}
+          </div>
 
-            <input placeholder="Family ID (यदि उपलब्ध हो)" type="number" value={formData.familyID} onChange={(e) => setFormData({...formData, familyID: e.target.value})} style={{ padding: '8px' }} />
-            <input placeholder="कार्यकाल (जैसे: 2026-2027)" value={formData.tenure} onChange={(e) => setFormData({...formData, tenure: e.target.value})} style={{ padding: '8px' }} />
-            <input placeholder="मोबाइल नंबर" value={formData.mobile} onChange={(e) => setFormData({...formData, mobile: e.target.value})} style={{ padding: '8px' }} />
-            <input placeholder="विशेष जिम्मेदारी / विवरण" value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} style={{ padding: '8px' }} />
-            
-            <button type="submit" style={{ padding: '10px', background: '#ff9800', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold', borderRadius: '4px' }}>
-              कमेटी में नियुक्त करें 🤝
-            </button>
-          </form>
-        </div>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>पद / दायित्व <span style={{ color: 'red' }}>*</span></label>
+            <input type="text" value={designation} onChange={(e) => setDesignation(e.target.value)} placeholder="जैसे: अध्यक्ष, सचिव, कोषाध्यक्ष" required style={inputStyle} />
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>पदाधिकारी का नाम <span style={{ color: 'red' }}>*</span></label>
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="पूरा नाम" required style={inputStyle} />
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>गोत्र</label>
+            <select value={gotra} onChange={(e) => setGotra(e.target.value)} style={inputStyle}>
+              <option value="">-- गोत्र चुनें --</option>
+              {["कश्यप","गर्ग","भारद्वाज","वशिष्ठ","अत्रि","विश्वमित्र","अन्य"].map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>मोबाइल नंबर</label>
+            <input type="tel" value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="10 अंकों का नंबर" style={inputStyle} />
+          </div>
+
+          <div style={{ marginBottom: '24px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>कार्यकाल (Tenure)</label>
+            <input type="text" value={tenure} onChange={(e) => setTenure(e.target.value)} placeholder="जैसे: 2024-2026" style={inputStyle} />
+          </div>
+
+          <button type="submit" disabled={loading} style={{
+            width: '100%', padding: '14px', background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+            color: 'white', border: 'none', borderRadius: '8px', fontSize: '18px',
+            fontWeight: 'bold', cursor: 'pointer', opacity: loading ? 0.7 : 1
+          }}>
+            {loading ? '⏳ जमा हो रहा...' : '✅ पदाधिकारी जोड़ें'}
+          </button>
+        </form>
       )}
     </div>
   );
