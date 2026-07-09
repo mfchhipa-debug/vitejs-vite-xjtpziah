@@ -143,7 +143,7 @@ export default function AddFamilyHead() {
             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>गोत्र चुने</label>
             <select value={gotra} onChange={(e) => setGotra(e.target.value)} style={inputStyle}>
               <option value="">-- गोत्र चुनें --</option>
-              {["कश्यप","गर्ग","भारद्वाज","वशिष्ठ","अत्रि","विश्वमित्र","अन्य"].map(g => <option key={g} value={g}>{g}</option>)}
+              {["भाटी","टाक","नागौरी","देवड़ा","कूकड़ा","राव","अन्य"].map(g => <option key={g} value={g}>{g}</option>)}
             </select>
           </div>
 
@@ -166,7 +166,7 @@ export default function AddFamilyHead() {
             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>ब्लड ग्रुप (Blood Group)</label>
             <select value={bloodGroup} onChange={(e) => setBloodGroup(e.target.value)} style={inputStyle}>
               <option value="">-- ब्लड ग्रुप चुनें --</option>
-              {["A+","A-","B+","B-","AB+","AB-","O+","O-"].map(bg => <option key={bg} value={bg}>{bg}</option>)}
+              {["A+","A-","B+","B-","O+","O-","AB+","AB-"].map(bg => <option key={bg} value={bg}>{bg}</option>)}
             </select>
           </div>
 

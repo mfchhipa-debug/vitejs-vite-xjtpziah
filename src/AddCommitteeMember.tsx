@@ -103,7 +103,7 @@ export default function AddCommitteeMember() {
             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>गोत्र</label>
             <select value={gotra} onChange={(e) => setGotra(e.target.value)} style={inputStyle}>
               <option value="">-- गोत्र चुनें --</option>
-              {["कश्यप","गर्ग","भारद्वाज","वशिष्ठ","अत्रि","विश्वमित्र","अन्य"].map(g => <option key={g} value={g}>{g}</option>)}
+              {["भाटी","टाक","नागौरी","देवड़ा","कूकड़ा","राव","अन्य"].map(g => <option key={g} value={g}>{g}</option>)}
             </select>
           </div>
 
