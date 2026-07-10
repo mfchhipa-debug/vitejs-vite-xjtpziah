@@ -388,90 +388,103 @@ export default function App() {
         </div>
       )}
 
-      {/* ===== DASHBOARD – 3+2 Layout ===== */}
       {/* ===== DASHBOARD – 3+2 Layout with Gradient Colors ===== */}
-<div style={{
-  display: 'grid',
-  gridTemplateColumns: 'repeat(3, 1fr)',
-  gap: '12px',
-  marginBottom: '20px',
-  maxWidth: '550px',
-  marginLeft: 'auto',
-  marginRight: 'auto'
-}}>
-  {/* 🏠 परिवार */}
-  <div style={{
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    borderRadius: '14px',
-    padding: '12px 8px',
-    textAlign: 'center',
-    color: 'white',
-    boxShadow: '0 4px 15px rgba(102, 126, 234, 0.35)'
-  }}>
-    <div style={{ fontSize: '28px' }}>🏠</div>
-    <div style={{ fontSize: '11px', fontWeight: '500', opacity: 0.85 }}>परिवार</div>
-    <div style={{ fontSize: '24px', fontWeight: '800' }}>{totalFamilies}</div>
-  </div>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: '12px',
+        marginBottom: '20px',
+        maxWidth: '550px',
+        marginLeft: 'auto',
+        marginRight: 'auto'
+      }}>
+        <div style={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          borderRadius: '14px',
+          padding: '12px 8px',
+          textAlign: 'center',
+          color: 'white',
+          boxShadow: '0 4px 15px rgba(102, 126, 234, 0.35)'
+        }}>
+          <div style={{ fontSize: '28px' }}>🏠</div>
+          <div style={{ fontSize: '11px', fontWeight: '500', opacity: 0.85 }}>परिवार</div>
+          <div style={{ fontSize: '24px', fontWeight: '800' }}>{totalFamilies}</div>
+        </div>
+        <div style={{
+          background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+          borderRadius: '14px',
+          padding: '12px 8px',
+          textAlign: 'center',
+          color: 'white',
+          boxShadow: '0 4px 15px rgba(17, 153, 142, 0.35)'
+        }}>
+          <div style={{ fontSize: '28px' }}>👥</div>
+          <div style={{ fontSize: '11px', fontWeight: '500', opacity: 0.85 }}>कुल सदस्य</div>
+          <div style={{ fontSize: '24px', fontWeight: '800' }}>{totalMembers}</div>
+        </div>
+        <div style={{
+          background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+          borderRadius: '14px',
+          padding: '12px 8px',
+          textAlign: 'center',
+          color: 'white',
+          boxShadow: '0 4px 15px rgba(245, 87, 108, 0.35)'
+        }}>
+          <div style={{ fontSize: '28px' }}>👶</div>
+          <div style={{ fontSize: '11px', fontWeight: '500', opacity: 0.85 }}>बच्चे (&lt;10)</div>
+          <div style={{ fontSize: '24px', fontWeight: '800' }}>{totalKids}</div>
+        </div>
+        <div style={{
+          background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+          borderRadius: '14px',
+          padding: '12px 8px',
+          textAlign: 'center',
+          color: 'white',
+          boxShadow: '0 4px 15px rgba(79, 172, 254, 0.35)'
+        }}>
+          <div style={{ fontSize: '28px' }}>👨</div>
+          <div style={{ fontSize: '11px', fontWeight: '500', opacity: 0.85 }}>बड़े सदस्य</div>
+          <div style={{ fontSize: '24px', fontWeight: '800' }}>{totalAdults}</div>
+        </div>
+        <div style={{
+          background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+          borderRadius: '14px',
+          padding: '12px 8px',
+          textAlign: 'center',
+          color: 'white',
+          boxShadow: '0 4px 15px rgba(250, 112, 154, 0.35)'
+        }}>
+          <div style={{ fontSize: '28px' }}>🎓</div>
+          <div style={{ fontSize: '11px', fontWeight: '500', opacity: 0.85 }}>छात्र</div>
+          <div style={{ fontSize: '24px', fontWeight: '800' }}>{totalStudents}</div>
+        </div>
+      </div>
 
-  {/* 👥 कुल सदस्य */}
-  <div style={{
-    background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
-    borderRadius: '14px',
-    padding: '12px 8px',
-    textAlign: 'center',
-    color: 'white',
-    boxShadow: '0 4px 15px rgba(17, 153, 142, 0.35)'
-  }}>
-    <div style={{ fontSize: '28px' }}>👥</div>
-    <div style={{ fontSize: '11px', fontWeight: '500', opacity: 0.85 }}>कुल सदस्य</div>
-    <div style={{ fontSize: '24px', fontWeight: '800' }}>{totalMembers}</div>
-  </div>
+      {/* ===== Toggle Button ===== */}
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+        <button
+          onClick={() => setViewMode(viewMode === 'card' ? 'list' : 'card')}
+          style={{
+            padding: '4px 12px',
+            background: '#667eea',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            fontSize: '12px',
+            boxShadow: '0 2px 6px rgba(102, 126, 234, 0.3)'
+          }}
+        >
+          {viewMode === 'card' ? '📋 लिस्ट व्यू' : '🃏 कार्ड व्यू'}
+        </button>
+      </div>
 
-  {/* 👶 बच्चे */}
-  <div style={{
-    background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-    borderRadius: '14px',
-    padding: '12px 8px',
-    textAlign: 'center',
-    color: 'white',
-    boxShadow: '0 4px 15px rgba(245, 87, 108, 0.35)'
-  }}>
-    <div style={{ fontSize: '28px' }}>👶</div>
-    <div style={{ fontSize: '11px', fontWeight: '500', opacity: 0.85 }}>बच्चे (&lt;10)</div>
-    <div style={{ fontSize: '24px', fontWeight: '800' }}>{totalKids}</div>
-  </div>
+      <hr style={{ margin: '35px 0', borderColor: '#e2e8f0' }} />
 
-  {/* 👨 बड़े सदस्य */}
-  <div style={{
-    background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-    borderRadius: '14px',
-    padding: '12px 8px',
-    textAlign: 'center',
-    color: 'white',
-    boxShadow: '0 4px 15px rgba(79, 172, 254, 0.35)'
-  }}>
-    <div style={{ fontSize: '28px' }}>👨</div>
-    <div style={{ fontSize: '11px', fontWeight: '500', opacity: 0.85 }}>बड़े सदस्य</div>
-    <div style={{ fontSize: '24px', fontWeight: '800' }}>{totalAdults}</div>
-  </div>
-
-  {/* 🎓 छात्र */}
-  <div style={{
-    background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-    borderRadius: '14px',
-    padding: '12px 8px',
-    textAlign: 'center',
-    color: 'white',
-    boxShadow: '0 4px 15px rgba(250, 112, 154, 0.35)'
-  }}>
-    <div style={{ fontSize: '28px' }}>🎓</div>
-    <div style={{ fontSize: '11px', fontWeight: '500', opacity: 0.85 }}>छात्र</div>
-    <div style={{ fontSize: '24px', fontWeight: '800' }}>{totalStudents}</div>
-  </div>
-</div>
-
-      {/* ===== Utility Buttons ===== */}
+      {/* ===== UTILITY BUTTONS – ऊपर (4) ===== */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+        {/* समाज कमेटी */}
         <div style={cardWrapperStyle}>
           <button onClick={() => setShowCommitteeList(!showCommitteeList)} style={toggleButtonStyle(showCommitteeList, '#ef4444', '#f59e0b')}>
             {showCommitteeList ? '▲ समाज कमेटी' : '▼ समाज कमेटी'}
@@ -489,6 +502,7 @@ export default function App() {
           )}
         </div>
 
+        {/* सभी परिवार */}
         <div style={cardWrapperStyle}>
           <button onClick={() => setShowFamilyList(!showFamilyList)} style={toggleButtonStyle(showFamilyList, '#ef4444', '#8b5cf6')}>
             {showFamilyList ? '▲ सभी परिवार' : '▼ सभी परिवार'}
@@ -524,6 +538,7 @@ export default function App() {
           )}
         </div>
 
+        {/* सभी सदस्य */}
         <div style={cardWrapperStyle}>
           <button onClick={() => setShowAllMembersList(!showAllMembersList)} style={toggleButtonStyle(showAllMembersList, '#ef4444', '#06b6d4')}>
             {showAllMembersList ? '▲ सभी सदस्य' : '▼ सभी सदस्य'}
@@ -563,6 +578,7 @@ export default function App() {
           )}
         </div>
 
+        {/* खोजें */}
         <div style={cardWrapperStyle}>
           <button onClick={() => setShowSearchBox(!showSearchBox)} style={toggleButtonStyle(showSearchBox, '#ef4444', '#3b82f6')}>
             {showSearchBox ? '▲ खोजें' : '▼ खोजें'}
@@ -759,6 +775,21 @@ export default function App() {
             </div>
           )}
         </div>
+      </div>
+
+      <hr style={{ margin: '35px 0', borderColor: '#e2e8f0' }} />
+
+      {/* ===== 3 FORMS BUTTONS – नीचे ===== */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+        gap: '16px',
+        marginBottom: '30px',
+        marginTop: '10px'
+      }}>
+        <AddFamilyHead />
+        <AddMemberToFamily />
+        <AddCommitteeMember />
       </div>
     </div>
   );
