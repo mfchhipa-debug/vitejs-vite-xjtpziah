@@ -2,29 +2,57 @@ import { useState, useEffect } from 'react';
 import { db, storage } from './firebaseConfig';
 import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getCustomOptions, addCustomOption } from './storageHelpers';
 
-const OPTIONS = {
-  gotras: ["भाटी", "टाक", "नागौरी", "देवड़ा", "कूकड़ा", "राव", "अन्य"],
-  relations: ["ख़ुद", "बीवी", "बेटा", "बेटी", "बहू", "पिता", "माँ", "पोता", "पोती", "अन्य"],
-  villageCity: ["सरदार शहर", "लाडनूँ", "निम्बी", "भादरा", "सीकर", "झूँझूनू", "फतेहपुर", "चूरू", "कुचामन सिटी", "सुजानगढ़", "राजलदेसर", "गंगानगर", "रायसिंहनगर", "सूरतगढ़", "किशनगढ़", "राणासर,", "डूँगरगढ़", "नागौर", "नीमच M P", "अन्य"],
-  areas: ["झोटवाड़ा", "नाहरी का नाका", "लंकापुरी", "साँगानेर", "रामगढ़ मोड़", "हसनपुरा", "खबूजा मंडी", "नया खेड़ा", "चीनी की बुर्ज", "वैशाली नगर", "खातीपुरा", "भाँकरोटा", "जामिया हिदाया", "पहाड़गंज", "अन्य"],
-  occupations: ["रंगाई", "व्यापार", "दुकान", "नौकरी (सरकारी)", "नौकरी (प्राइवेट)", "छात्र", "गृहणी", "अन्य"],
-  genders: ["पुरुष", "स्त्री", "अन्य"],
-  maritalStatuses: ["शादीशुदा", "कुंवारा", "सगाई", "अन्य"],
+const BASE_OPTIONS = {
+  gotras: ["भाटा", "टाक", "नागोरा", "देवडा", "कूकडा", "राव"],
+  relations: ["ख़ुद", "बीवी", "बेटा", "बेटी", "बहू", "पिता", "माँ", "पोता", "पोती"],
+  villageCity: ["सरदार शहर", "लाडनू", "निम्बी", "भादरा", "सीकर", "झुँझुनू", "फतेहपुर", "चूर", "कुचामन सिटी", "सुजानगढ", "राजलदेसर", "गंगानगर", "रायसिंहनगर", "सूरतगढ", "किशनगढ", "राणासर", "डूंगरगढ", "नागोर", "नीमच M P"],
+  areas: ["झोटवाडा", "नाहरी का नाका", "लंकापुरी", "साँगानेर", "रामगढ मोड", "हसनपुरा", "खबूजा मंडी", "नया खेडा", "चीनी की बुजू", "वैशाली नगर", "खातीपुरा", "भाँकरोटा", "जामिया हिदाया", "पहाडगंज"],
+  occupations: ["रंगाई", "व्यापार", "दुकान", "नौकरी (सरकारी)", "नौकरी (प्राइवेट)", "छात्र", "गृहणी"],
+  genders: ["पुरुष", "स्त्री"],
+  maritalStatuses: ["शादीशुदा", "कुंवारा", "सगाई"],
   bloodGroups: ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-", "पता नहीं"]
 };
+
+const OTHER_VALUE = '__other__';
 
 export default function AddMemberToFamily() {
   const [isOpen, setIsOpen] = useState(false);
   const [heads, setHeads] = useState<any[]>([]);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
   const [formData, setFormData] = useState({
     familyID: '', memberNo: '', name: '', fatherName: '', gotra: '',
     relationToHead: '', dob: '', age_years: '', age_months: '',
     gender: '', bloodGroup: '', maritalStatus: '', education: '', occupation: '',
     villageCity: '', area: '', address: '', mobile: '', isStudent: false
   });
+
+  const [gotraIsOther, setGotraIsOther] = useState(false);
+  const [relationIsOther, setRelationIsOther] = useState(false);
+  const [genderIsOther, setGenderIsOther] = useState(false);
+  const [maritalIsOther, setMaritalIsOther] = useState(false);
+  const [occupationIsOther, setOccupationIsOther] = useState(false);
+  const [villageCityIsOther, setVillageCityIsOther] = useState(false);
+  const [areaIsOther, setAreaIsOther] = useState(false);
+
+  const customGotras = getCustomOptions('gotras');
+  const customRelations = getCustomOptions('relations');
+  const customGenders = getCustomOptions('genders');
+  const customMaritals = getCustomOptions('maritalStatuses');
+  const customOccupations = getCustomOptions('occupations');
+  const customVillageCity = getCustomOptions('villageCity');
+  const customAreas = getCustomOptions('areas');
+
+  const allGotras = [...BASE_OPTIONS.gotras, ...customGotras];
+  const allRelations = [...BASE_OPTIONS.relations, ...customRelations];
+  const allGenders = [...BASE_OPTIONS.genders, ...customGenders];
+  const allMaritals = [...BASE_OPTIONS.maritalStatuses, ...customMaritals];
+  const allOccupations = [...BASE_OPTIONS.occupations, ...customOccupations];
+  const allVillageCity = [...BASE_OPTIONS.villageCity, ...customVillageCity];
+  const allAreas = [...BASE_OPTIONS.areas, ...customAreas];
 
   useEffect(() => {
     const fetchHeads = async () => {
@@ -60,6 +88,44 @@ export default function AddMemberToFamily() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.familyID) { alert("कृपया Family ID चुनें!"); return; }
+
+    if (gotraIsOther && formData.gotra.trim()) addCustomOption('gotras', formData.gotra.trim());
+    if (relationIsOther && formData.relationToHead.trim()) addCustomOption('relations', formData.relationToHead.trim());
+    if (genderIsOther && formData.gender.trim()) addCustomOption('genders', formData.gender.trim());
+    if (maritalIsOther && formData.maritalStatus.trim()) addCustomOption('maritalStatuses', formData.maritalStatus.trim());
+    if (occupationIsOther && formData.occupation.trim()) addCustomOption('occupations', formData.occupation.trim());
+    if (villageCityIsOther && formData.villageCity.trim()) addCustomOption('villageCity', formData.villageCity.trim());
+    if (areaIsOther && formData.area.trim()) addCustomOption('areas', formData.area.trim());
+
+    if (gotraIsOther && !formData.gotra.trim()) {
+      alert('कृपया "अन्य" गोत्र के लिए कुछ लिखें या कोई मानक गोत्र चुनें।');
+      return;
+    }
+    if (relationIsOther && !formData.relationToHead.trim()) {
+      alert('कृपया "अन्य" संबंध के लिए कुछ लिखें या कोई मानक विकल्प चुनें।');
+      return;
+    }
+    if (genderIsOther && !formData.gender.trim()) {
+      alert('कृपया "अन्य" लिंग के लिए कुछ लिखें या कोई मानक विकल्प चुनें।');
+      return;
+    }
+    if (maritalIsOther && !formData.maritalStatus.trim()) {
+      alert('कृपया "अन्य" वैवाहिक स्थिति के लिए कुछ लिखें या कोई मानक विकल्प चुनें।');
+      return;
+    }
+    if (occupationIsOther && !formData.occupation.trim()) {
+      alert('कृपया "अन्य" व्यवसाय के लिए कुछ लिखें या कोई मानक विकल्प चुनें।');
+      return;
+    }
+    if (villageCityIsOther && !formData.villageCity.trim()) {
+      alert('कृपया "अन्य" गाँव/शहर के लिए कुछ लिखें या कोई मानक विकल्प चुनें।');
+      return;
+    }
+    if (areaIsOther && !formData.area.trim()) {
+      alert('कृपया "अन्य" एरिया/कॉलोनी के लिए कुछ लिखें या कोई मानक विकल्प चुनें।');
+      return;
+    }
+
     try {
       let photoURL = '';
       if (photoFile) {
@@ -69,13 +135,23 @@ export default function AddMemberToFamily() {
       }
       await addDoc(collection(db, 'members'), { ...formData, isHead: false, photoURL, createdAt: new Date() });
       alert('✅ सदस्य सफलतापूर्वक जोड़ दिया गया!');
+
       setFormData({
         familyID: '', memberNo: '', name: '', fatherName: '', gotra: '',
         relationToHead: '', dob: '', age_years: '', age_months: '',
         gender: '', bloodGroup: '', maritalStatus: '', education: '', occupation: '',
         villageCity: '', area: '', address: '', mobile: '', isStudent: false
       });
-      setPhotoFile(null); setPhotoPreview(null); setIsOpen(false);
+      setGotraIsOther(false);
+      setRelationIsOther(false);
+      setGenderIsOther(false);
+      setMaritalIsOther(false);
+      setOccupationIsOther(false);
+      setVillageCityIsOther(false);
+      setAreaIsOther(false);
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      setIsOpen(false);
     } catch (error) {
       console.error(error);
       alert('❌ कुछ गड़बड़ हुई, कृपया पुनः प्रयास करें।');
@@ -91,6 +167,56 @@ export default function AddMemberToFamily() {
     fontSize: '14px'
   };
 
+  const renderSelectWithOther = (
+    label: string,
+    value: string,
+    isOther: boolean,
+    options: string[],
+    onChange: (val: string) => void,
+    onOtherToggle: (isOther: boolean) => void,
+    placeholderText: string = 'कुछ लिखें...',
+    defaultOptionText: string = '-- चुने --'
+  ) => {
+    const handleSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const val = e.target.value;
+      if (val === OTHER_VALUE) {
+        onOtherToggle(true);
+        onChange('');
+      } else {
+        onOtherToggle(false);
+        onChange(val);
+      }
+    };
+
+    return (
+      <div style={{ marginBottom: '16px' }}>
+        <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>
+          {label}
+        </label>
+        <select
+          value={isOther ? OTHER_VALUE : value}
+          onChange={handleSelect}
+          style={inputStyle}
+        >
+          <option value="">{defaultOptionText}</option>
+          {options.map(opt => (
+            <option key={opt} value={opt}>{opt}</option>
+          ))}
+          <option value={OTHER_VALUE}>अन्य</option>
+        </select>
+        {isOther && (
+          <input
+            type="text"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholderText}
+            style={{ ...inputStyle, marginTop: '8px' }}
+          />
+        )}
+      </div>
+    );
+  };
+
   return (
     <div style={{
       background: 'white', padding: '20px', borderRadius: '12px',
@@ -100,11 +226,10 @@ export default function AddMemberToFamily() {
       <button onClick={() => setIsOpen(!isOpen)} style={{
         padding: '15px', width: '100%', background: '#3b82f6', color: 'white',
         border: 'none', borderRadius: '8px', cursor: 'pointer',
-        fontSize: '18px',   // ⬅️ बड़ा किया
-        fontWeight: 'bold',
+        fontSize: '18px', fontWeight: 'bold',
         fontFamily: "'Poppins', 'Noto Sans', sans-serif"
       }}>
-        {isOpen ? '▲ 2. सदस्य' : '▼ 2. सदस्य'}
+        {isOpen ? '▲  सदस्य' : '▼  सदस्य'}
       </button>
 
       {isOpen && (
@@ -141,21 +266,27 @@ export default function AddMemberToFamily() {
             <input type="text" placeholder="पिता या पति का नाम" value={formData.fatherName} onChange={(e) => setFormData({...formData, fatherName: e.target.value})} style={inputStyle} />
           </div>
 
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>गोत्र</label>
-            <select value={formData.gotra} onChange={(e) => setFormData({...formData, gotra: e.target.value})} style={inputStyle}>
-              <option value="">-- गोत्र चुनें --</option>
-              {OPTIONS.gotras.map(g => <option key={g} value={g}>{g}</option>)}
-            </select>
-          </div>
+          {renderSelectWithOther(
+            'गोत्र',
+            formData.gotra,
+            gotraIsOther,
+            allGotras,
+            (val) => setFormData({...formData, gotra: val}),
+            setGotraIsOther,
+            'अन्य गोत्र लिखें...',
+            'गोत्र चुनें'
+          )}
 
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>संबंध (मुखिया से)</label>
-            <select value={formData.relationToHead} onChange={(e) => setFormData({...formData, relationToHead: e.target.value})} style={inputStyle}>
-              <option value="">-- संबंध चुनें --</option>
-              {OPTIONS.relations.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
-          </div>
+          {renderSelectWithOther(
+            'संबंध (मुखिया से)',
+            formData.relationToHead,
+            relationIsOther,
+            allRelations,
+            (val) => setFormData({...formData, relationToHead: val}),
+            setRelationIsOther,
+            'अन्य संबंध लिखें...',
+            'संबंध चुनें'
+          )}
 
           <div style={{ marginBottom: '16px' }}>
             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>जन्म तिथि (DOB) <span style={{ color: 'red' }}>*</span></label>
@@ -167,50 +298,65 @@ export default function AddMemberToFamily() {
             <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>(उम्र स्वतः कैलकुलेट होगी)</div>
           </div>
 
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>लिंग</label>
-            <select value={formData.gender} onChange={(e) => setFormData({...formData, gender: e.target.value})} style={inputStyle}>
-              <option value="">-- लिंग चुनें --</option>
-              {OPTIONS.genders.map(g => <option key={g} value={g}>{g}</option>)}
-            </select>
-          </div>
+          {renderSelectWithOther(
+            'लिंग',
+            formData.gender,
+            genderIsOther,
+            allGenders,
+            (val) => setFormData({...formData, gender: val}),
+            setGenderIsOther,
+            'अन्य लिंग लिखें...',
+            'लिंग चुनें'
+          )}
 
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>वैवाहिक स्थिति</label>
-            <select value={formData.maritalStatus} onChange={(e) => setFormData({...formData, maritalStatus: e.target.value})} style={inputStyle}>
-              <option value="">-- वैवाहिक स्थिति चुनें --</option>
-              {OPTIONS.maritalStatuses.map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
-          </div>
+          {renderSelectWithOther(
+            'वैवाहिक स्थिति',
+            formData.maritalStatus,
+            maritalIsOther,
+            allMaritals,
+            (val) => setFormData({...formData, maritalStatus: val}),
+            setMaritalIsOther,
+            'अन्य स्थिति लिखें...',
+            'वैवाहिक स्थिति चुनें'
+          )}
 
           <div style={{ marginBottom: '16px' }}>
             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>शिक्षा</label>
             <input type="text" placeholder="जैसे: B.A., M.Sc., 12वीं" value={formData.education} onChange={(e) => setFormData({...formData, education: e.target.value})} style={inputStyle} />
           </div>
 
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>व्यवसाय</label>
-            <select value={formData.occupation} onChange={(e) => setFormData({...formData, occupation: e.target.value})} style={inputStyle}>
-              <option value="">-- व्यवसाय चुनें --</option>
-              {OPTIONS.occupations.map(o => <option key={o} value={o}>{o}</option>)}
-            </select>
-          </div>
+          {renderSelectWithOther(
+            'व्यवसाय',
+            formData.occupation,
+            occupationIsOther,
+            allOccupations,
+            (val) => setFormData({...formData, occupation: val}),
+            setOccupationIsOther,
+            'अन्य व्यवसाय लिखें...',
+            'व्यवसाय चुनें'
+          )}
 
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>गाँव/शहर</label>
-            <select value={formData.villageCity} onChange={(e) => setFormData({...formData, villageCity: e.target.value})} style={inputStyle}>
-              <option value="">-- गाँव/शहर चुनें --</option>
-              {OPTIONS.villageCity.map(v => <option key={v} value={v}>{v}</option>)}
-            </select>
-          </div>
+          {renderSelectWithOther(
+            'गाँव/शहर',
+            formData.villageCity,
+            villageCityIsOther,
+            allVillageCity,
+            (val) => setFormData({...formData, villageCity: val}),
+            setVillageCityIsOther,
+            'अन्य गाँव/शहर लिखें...',
+            'गाँव/शहर चुनें'
+          )}
 
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>एरिया / कॉलोनी</label>
-            <select value={formData.area} onChange={(e) => setFormData({...formData, area: e.target.value})} style={inputStyle}>
-              <option value="">-- एरिया चुनें --</option>
-              {OPTIONS.areas.map(a => <option key={a} value={a}>{a}</option>)}
-            </select>
-          </div>
+          {renderSelectWithOther(
+            'एरिया / कॉलोनी',
+            formData.area,
+            areaIsOther,
+            allAreas,
+            (val) => setFormData({...formData, area: val}),
+            setAreaIsOther,
+            'अन्य एरिया लिखें...',
+            'एरिया/कॉलोनी चुनें'
+          )}
 
           <div style={{ marginBottom: '16px' }}>
             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>पूरा पता</label>
@@ -225,8 +371,8 @@ export default function AddMemberToFamily() {
           <div style={{ marginBottom: '16px' }}>
             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#334155' }}>ब्लड ग्रुप (Blood Group)</label>
             <select value={formData.bloodGroup} onChange={(e) => setFormData({...formData, bloodGroup: e.target.value})} style={inputStyle}>
-              <option value="">-- ब्लड ग्रुप चुनें --</option>
-              {OPTIONS.bloodGroups.map(bg => <option key={bg} value={bg}>{bg}</option>)}
+              <option value="">ब्लड ग्रुप चुनें</option>
+              {BASE_OPTIONS.bloodGroups.map(bg => <option key={bg} value={bg}>{bg}</option>)}
             </select>
           </div>
 
@@ -237,15 +383,26 @@ export default function AddMemberToFamily() {
             </label>
           </div>
 
-          <button type="submit" style={{
-            width: '100%', padding: '14px', background: 'linear-gradient(135deg, #667eea, #764ba2)',
-            color: 'white', border: 'none', borderRadius: '8px', fontSize: '18px',
-            fontWeight: 'bold', cursor: 'pointer'
-          }}>
-            ✅ सदस्य सबमिट करें
+          <button
+            type="submit"
+            style={{
+              display: 'block',
+              margin: '0 auto',
+              width: '35%',
+              padding: '5px 16px',
+              background: 'linear-gradient(135deg, #667eea, #764ba2)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '15px',
+              fontWeight: 'bold',
+              cursor: 'pointer'
+            }}
+          >
+            ✅ सबमिट
           </button>
         </form>
       )}
     </div>
   );
-} 
+}

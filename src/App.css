@@ -1,76 +1,333 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  background-color: #f4f7f6 !important;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  padding: 20px;
-}
-
-.app-container {
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.main-title {
-  text-align: center;
-  color: #1a237e;
-  font-size: 2.5rem;
-  margin-bottom: 30px;
-  padding: 20px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.forms-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 30px;
-}
-
-/* फॉर्म कार्ड स्टाइलिंग */
-.form-card {
-  background: white;
-  border-radius: 20px;
-  padding: 25px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e0e0e0;
-}
-
-.form-card h3 {
-  color: #1a237e;
-  margin-bottom: 20px;
-  padding-bottom: 10px;
-  border-bottom: 2px solid #667eea;
-}
-
-/* इनपुट और सिलेक्ट फील्ड्स */
-input, select {
-  width: 100%;
-  padding: 12px;
-  margin: 8px 0 16px 0;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  box-sizing: border-box;
-}
-
-/* बटन */
-button {
-  background-color: #28a745;
-  color: white;
-  padding: 12px;
-  border: none;
-  border-radius: 8px;
-  width: 100%;
-  cursor: pointer;
-  font-weight: bold;
-  font-size: 1rem;
-}
-
-button:hover {
-  background-color: #218838;
-}
+/* ============================================
+   🎯 GLOBAL RESET + MOBILE FIRST
+   ============================================ */
+   * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  body {
+    background: #f0f2f6;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    padding: 0;
+    margin: 0;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  
+  /* ============================================
+     📱 APP CONTAINER (Phone-Sized)
+     ============================================ */
+  .app-container {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 16px 16px 40px;
+    background: #ffffff;
+    min-height: 100vh;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.04);
+  }
+  
+  /* ============================================
+     🏛️ HEADER (Styled like App)
+     ============================================ */
+  .app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0 16px;
+    border-bottom: 2px solid #f0f2f6;
+    margin-bottom: 20px;
+  }
+  
+  .app-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  .app-header-left .logo {
+    font-size: 2.2rem;
+    line-height: 1;
+  }
+  
+  .app-header-left .title {
+    font-size: 1.3rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1.2;
+  }
+  
+  .app-header-left .subtitle {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 3px;
+    color: #f5576c;
+    text-transform: uppercase;
+    margin-top: -2px;
+  }
+  
+  .settings-btn {
+    background: none;
+    border: none;
+    font-size: 1.8rem;
+    padding: 8px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.2s;
+    width: auto;
+    box-shadow: none;
+    color: #667eea;
+  }
+  
+  .settings-btn:active {
+    transform: scale(0.9);
+    background: rgba(102, 126, 234, 0.1);
+  }
+  
+  /* ============================================
+     📊 DASHBOARD COUNTERS (Grid Cards)
+     ============================================ */
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+  
+  .dashboard-item {
+    background: #f8fafc;
+    padding: 14px 8px;
+    border-radius: 14px;
+    text-align: center;
+    border: 1px solid #edf2f7;
+    transition: all 0.2s;
+  }
+  
+  .dashboard-item:active {
+    transform: scale(0.96);
+  }
+  
+  .dashboard-item .label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+  }
+  
+  .dashboard-item .value {
+    font-size: 28px;
+    font-weight: 800;
+    color: #1a237e;
+    margin-top: 2px;
+    line-height: 1.2;
+  }
+  
+  /* ============================================
+     🃏 CARDS (Like Mobile App)
+     ============================================ */
+  .card {
+    background: white;
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    border: 1px solid #f0f2f6;
+    transition: all 0.2s;
+  }
+  
+  .card:active {
+    transform: scale(0.99);
+  }
+  
+  /* ============================================
+     🎛️ BUTTONS – Large & Touch-Friendly
+     ============================================ */
+  .btn {
+    width: 100%;
+    padding: 14px 18px;
+    font-size: 16px;
+    font-weight: 700;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    touch-action: manipulation;
+  }
+  
+  .btn:active {
+    transform: scale(0.96);
+    box-shadow: 0 1px 4px rgba(102, 126, 234, 0.2);
+  }
+  
+  .btn-secondary {
+    background: #f1f4f9;
+    color: #1a237e;
+    box-shadow: none;
+  }
+  
+  .btn-secondary:active {
+    background: #e2e8f0;
+  }
+  
+  /* Toggle Button (Open/Close) */
+  .toggle-btn {
+    width: 100%;
+    padding: 14px 18px;
+    font-size: 16px;
+    font-weight: 700;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #f1f4f9;
+    color: #1a237e;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    touch-action: manipulation;
+  }
+  
+  .toggle-btn:active {
+    transform: scale(0.97);
+  }
+  
+  .toggle-btn.open {
+    background: #667eea;
+    color: white;
+  }
+  
+  /* ============================================
+     📝 FORMS – Mobile-Friendly Inputs
+     ============================================ */
+  .input-group {
+    margin-bottom: 16px;
+  }
+  
+  .input-group label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 4px;
+  }
+  
+  .input-group input,
+  .input-group select {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 15px;
+    border: 1px solid #dce1ec;
+    border-radius: 10px;
+    background: #fafbfc;
+    transition: border 0.2s, background 0.2s;
+    font-family: inherit;
+  }
+  
+  .input-group input:focus,
+  .input-group select:focus {
+    border-color: #667eea;
+    outline: none;
+    background: white;
+  }
+  
+  .input-group input::placeholder {
+    color: #a0aec0;
+  }
+  
+  /* ============================================
+     📋 LISTS – Clean & Scannable
+     ============================================ */
+  .list-item {
+    padding: 12px 14px;
+    border-bottom: 1px solid #f0f2f6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 15px;
+  }
+  
+  .list-item:last-child {
+    border-bottom: none;
+  }
+  
+  .list-item .name {
+    font-weight: 600;
+    color: #1a202c;
+  }
+  
+  .list-item .badge {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 20px;
+    background: #e2e8f0;
+    color: #4a5568;
+  }
+  
+  /* ============================================
+     🏷️ COMMON UTILITY
+     ============================================ */
+  .text-center {
+    text-align: center;
+  }
+  
+  .mt-8 { margin-top: 8px; }
+  .mt-16 { margin-top: 16px; }
+  .mb-16 { margin-bottom: 16px; }
+  
+  /* ============================================
+     🌙 RESPONSIVE (Larger Screens)
+     ============================================ */
+  @media (min-width: 640px) {
+    .app-container {
+      max-width: 520px;
+      padding: 24px 24px 40px;
+    }
+  
+    .dashboard-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+  
+    .dashboard-item .value {
+      font-size: 32px;
+    }
+  }
+  
+  @media (min-width: 1024px) {
+    .app-container {
+      max-width: 560px;
+      padding: 32px 32px 48px;
+    }
+  }
+  
+  /* ============================================
+     ⚡ PWA – Full Screen Improvements
+     ============================================ */
+  @media (display-mode: standalone) {
+    body {
+      background: #ffffff;
+    }
+  
+    .app-container {
+      max-width: 100%;
+      padding: 20px 16px 32px;
+    }
+  }
+  
+  /* Scrollbar Hide (Optional) */
+  ::-webkit-scrollbar {
+    width: 0;
+    background: transparent;
+  }
