@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db } from './firebaseConfig';
-import { collection, getDocs, doc, deleteDoc, updateDoc, addDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import AddFamilyHead from './AddFamilyHead';
 import AddMemberToFamily from './AddMemberToFamily';
 import AddCommitteeMember from './AddCommitteeMember';
@@ -390,9 +390,7 @@ export default function App() {
         </div>
       )}
 
-      {/* ========================================================= */}
-      {/* 📊 नया Dashboard – Professional Gradient Cards */}
-      {/* ========================================================= */}
+      {/* 📊 नया Dashboard – Gradient Cards */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
@@ -481,7 +479,6 @@ export default function App() {
 
       {/* Utility Buttons */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '30px' }}>
-        {/* समाज कमेटी */}
         <div style={cardWrapperStyle}>
           <button onClick={() => setShowCommitteeList(!showCommitteeList)} style={toggleButtonStyle(showCommitteeList, '#ef4444', '#f59e0b')}>
             {showCommitteeList ? '▲ समाज कमेटी' : '▼ समाज कमेटी'}
@@ -499,7 +496,6 @@ export default function App() {
           )}
         </div>
 
-        {/* सभी परिवार */}
         <div style={cardWrapperStyle}>
           <button onClick={() => setShowFamilyList(!showFamilyList)} style={toggleButtonStyle(showFamilyList, '#ef4444', '#8b5cf6')}>
             {showFamilyList ? '▲ सभी परिवार' : '▼ सभी परिवार'}
@@ -535,7 +531,6 @@ export default function App() {
           )}
         </div>
 
-        {/* सभी सदस्य */}
         <div style={cardWrapperStyle}>
           <button onClick={() => setShowAllMembersList(!showAllMembersList)} style={toggleButtonStyle(showAllMembersList, '#ef4444', '#06b6d4')}>
             {showAllMembersList ? '▲ सभी सदस्य' : '▼ सभी सदस्य'}
@@ -575,7 +570,6 @@ export default function App() {
           )}
         </div>
 
-        {/* खोजें */}
         <div style={cardWrapperStyle}>
           <button onClick={() => setShowSearchBox(!showSearchBox)} style={toggleButtonStyle(showSearchBox, '#ef4444', '#3b82f6')}>
             {showSearchBox ? '▲ खोजें' : '▼ खोजें'}
