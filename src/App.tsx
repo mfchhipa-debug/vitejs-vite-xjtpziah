@@ -390,12 +390,12 @@ export default function App() {
         </div>
       )}
 
-      {/* 📊 नया Dashboard – Gradient Cards */}
+      {/* Dashboard */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
         gap: '16px',
-        marginBottom: '30px'
+        marginBottom: '20px'
       }}>
         <div style={{
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -466,6 +466,26 @@ export default function App() {
           <div style={{ fontSize: '13px', fontWeight: '500', opacity: 0.85 }}>छात्र</div>
           <div style={{ fontSize: '30px', fontWeight: '800', marginTop: '2px' }}>{totalStudents}</div>
         </div>
+      </div>
+
+      {/* 🔄 View Toggle Button – Card / List */}
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+        <button
+          onClick={() => setViewMode(viewMode === 'card' ? 'list' : 'card')}
+          style={{
+            padding: '8px 20px',
+            background: '#667eea',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            fontSize: '14px',
+            boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)'
+          }}
+        >
+          {viewMode === 'card' ? '📋 लिस्ट व्यू' : '🃏 कार्ड व्यू'}
+        </button>
       </div>
 
       {/* 3 Forms */}
