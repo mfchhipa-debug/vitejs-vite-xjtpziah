@@ -330,7 +330,6 @@ export default function App() {
         </button>
       </div>
 
-      {/* Settings */}
       {showSettings && (
         <div style={{
           background: 'white',
@@ -377,7 +376,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Birthday Alert */}
       {birthdayFolks.length > 0 && (
         <div style={{ background: '#fff3cd', border: '1px solid #ffeeba', color: '#856404', padding: '15px', borderRadius: '8px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span style={{ fontSize: '24px' }}>🎉</span>
@@ -390,114 +388,89 @@ export default function App() {
         </div>
       )}
 
-      {/* Dashboard */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-        gap: '16px',
-        marginBottom: '20px'
-      }}>
-        <div style={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          borderRadius: '16px',
-          padding: '18px 14px',
-          textAlign: 'center',
-          color: 'white',
-          boxShadow: '0 4px 15px rgba(102, 126, 234, 0.35)',
-          transition: 'transform 0.2s'
-        }}>
-          <div style={{ fontSize: '28px', marginBottom: '4px' }}>🏠</div>
-          <div style={{ fontSize: '13px', fontWeight: '500', opacity: 0.85 }}>परिवार</div>
-          <div style={{ fontSize: '30px', fontWeight: '800', marginTop: '2px' }}>{totalFamilies}</div>
-        </div>
+      {/* ===== DASHBOARD – 3+2 Layout ===== */}
+      {/* ===== DASHBOARD – 3+2 Layout with Gradient Colors ===== */}
+<div style={{
+  display: 'grid',
+  gridTemplateColumns: 'repeat(3, 1fr)',
+  gap: '12px',
+  marginBottom: '20px',
+  maxWidth: '550px',
+  marginLeft: 'auto',
+  marginRight: 'auto'
+}}>
+  {/* 🏠 परिवार */}
+  <div style={{
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    borderRadius: '14px',
+    padding: '12px 8px',
+    textAlign: 'center',
+    color: 'white',
+    boxShadow: '0 4px 15px rgba(102, 126, 234, 0.35)'
+  }}>
+    <div style={{ fontSize: '28px' }}>🏠</div>
+    <div style={{ fontSize: '11px', fontWeight: '500', opacity: 0.85 }}>परिवार</div>
+    <div style={{ fontSize: '24px', fontWeight: '800' }}>{totalFamilies}</div>
+  </div>
 
-        <div style={{
-          background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
-          borderRadius: '16px',
-          padding: '18px 14px',
-          textAlign: 'center',
-          color: 'white',
-          boxShadow: '0 4px 15px rgba(17, 153, 142, 0.35)',
-          transition: 'transform 0.2s'
-        }}>
-          <div style={{ fontSize: '28px', marginBottom: '4px' }}>👥</div>
-          <div style={{ fontSize: '13px', fontWeight: '500', opacity: 0.85 }}>कुल सदस्य</div>
-          <div style={{ fontSize: '30px', fontWeight: '800', marginTop: '2px' }}>{totalMembers}</div>
-        </div>
+  {/* 👥 कुल सदस्य */}
+  <div style={{
+    background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+    borderRadius: '14px',
+    padding: '12px 8px',
+    textAlign: 'center',
+    color: 'white',
+    boxShadow: '0 4px 15px rgba(17, 153, 142, 0.35)'
+  }}>
+    <div style={{ fontSize: '28px' }}>👥</div>
+    <div style={{ fontSize: '11px', fontWeight: '500', opacity: 0.85 }}>कुल सदस्य</div>
+    <div style={{ fontSize: '24px', fontWeight: '800' }}>{totalMembers}</div>
+  </div>
 
-        <div style={{
-          background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-          borderRadius: '16px',
-          padding: '18px 14px',
-          textAlign: 'center',
-          color: 'white',
-          boxShadow: '0 4px 15px rgba(245, 87, 108, 0.35)',
-          transition: 'transform 0.2s'
-        }}>
-          <div style={{ fontSize: '28px', marginBottom: '4px' }}>👶</div>
-          <div style={{ fontSize: '13px', fontWeight: '500', opacity: 0.85 }}>बच्चे (&lt;10 वर्ष)</div>
-          <div style={{ fontSize: '30px', fontWeight: '800', marginTop: '2px' }}>{totalKids}</div>
-        </div>
+  {/* 👶 बच्चे */}
+  <div style={{
+    background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+    borderRadius: '14px',
+    padding: '12px 8px',
+    textAlign: 'center',
+    color: 'white',
+    boxShadow: '0 4px 15px rgba(245, 87, 108, 0.35)'
+  }}>
+    <div style={{ fontSize: '28px' }}>👶</div>
+    <div style={{ fontSize: '11px', fontWeight: '500', opacity: 0.85 }}>बच्चे (&lt;10)</div>
+    <div style={{ fontSize: '24px', fontWeight: '800' }}>{totalKids}</div>
+  </div>
 
-        <div style={{
-          background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-          borderRadius: '16px',
-          padding: '18px 14px',
-          textAlign: 'center',
-          color: 'white',
-          boxShadow: '0 4px 15px rgba(79, 172, 254, 0.35)',
-          transition: 'transform 0.2s'
-        }}>
-          <div style={{ fontSize: '28px', marginBottom: '4px' }}>👨</div>
-          <div style={{ fontSize: '13px', fontWeight: '500', opacity: 0.85 }}>बड़े सदस्य</div>
-          <div style={{ fontSize: '30px', fontWeight: '800', marginTop: '2px' }}>{totalAdults}</div>
-        </div>
+  {/* 👨 बड़े सदस्य */}
+  <div style={{
+    background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+    borderRadius: '14px',
+    padding: '12px 8px',
+    textAlign: 'center',
+    color: 'white',
+    boxShadow: '0 4px 15px rgba(79, 172, 254, 0.35)'
+  }}>
+    <div style={{ fontSize: '28px' }}>👨</div>
+    <div style={{ fontSize: '11px', fontWeight: '500', opacity: 0.85 }}>बड़े सदस्य</div>
+    <div style={{ fontSize: '24px', fontWeight: '800' }}>{totalAdults}</div>
+  </div>
 
-        <div style={{
-          background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-          borderRadius: '16px',
-          padding: '18px 14px',
-          textAlign: 'center',
-          color: 'white',
-          boxShadow: '0 4px 15px rgba(250, 112, 154, 0.35)',
-          transition: 'transform 0.2s'
-        }}>
-          <div style={{ fontSize: '28px', marginBottom: '4px' }}>🎓</div>
-          <div style={{ fontSize: '13px', fontWeight: '500', opacity: 0.85 }}>छात्र</div>
-          <div style={{ fontSize: '30px', fontWeight: '800', marginTop: '2px' }}>{totalStudents}</div>
-        </div>
-      </div>
+  {/* 🎓 छात्र */}
+  <div style={{
+    background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+    borderRadius: '14px',
+    padding: '12px 8px',
+    textAlign: 'center',
+    color: 'white',
+    boxShadow: '0 4px 15px rgba(250, 112, 154, 0.35)'
+  }}>
+    <div style={{ fontSize: '28px' }}>🎓</div>
+    <div style={{ fontSize: '11px', fontWeight: '500', opacity: 0.85 }}>छात्र</div>
+    <div style={{ fontSize: '24px', fontWeight: '800' }}>{totalStudents}</div>
+  </div>
+</div>
 
-      {/* 🔄 View Toggle Button – Card / List */}
-      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
-        <button
-          onClick={() => setViewMode(viewMode === 'card' ? 'list' : 'card')}
-          style={{
-            padding: '8px 20px',
-            background: '#667eea',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontWeight: 'bold',
-            fontSize: '14px',
-            boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)'
-          }}
-        >
-          {viewMode === 'card' ? '📋 लिस्ट व्यू' : '🃏 कार्ड व्यू'}
-        </button>
-      </div>
-
-      {/* 3 Forms */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '30px' }}>
-        <AddFamilyHead />
-        <AddMemberToFamily />
-        <AddCommitteeMember />
-      </div>
-
-      <hr style={{ margin: '35px 0', borderColor: '#e2e8f0' }} />
-
-      {/* Utility Buttons */}
+      {/* ===== Utility Buttons ===== */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '30px' }}>
         <div style={cardWrapperStyle}>
           <button onClick={() => setShowCommitteeList(!showCommitteeList)} style={toggleButtonStyle(showCommitteeList, '#ef4444', '#f59e0b')}>
