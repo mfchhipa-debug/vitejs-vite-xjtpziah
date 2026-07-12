@@ -1,186 +1,212 @@
 import { useState } from 'react';
 import { db } from './firebaseConfig';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
+import * as XLSX from 'xlsx';
 
-export default function BulkImport({ onRefresh }: { onRefresh: () => void }) {
+interface BulkImportProps {
+  onRefresh: () => void;
+}
+
+export default function BulkImport({ onRefresh }: BulkImportProps) {
   const [loading, setLoading] = useState(false);
-  const [statusMessage, setStatusMessage] = useState('');
 
-  // CSV टेक्स्ट को ऐरे में बदलने का सिंपल हेल्पर
-  const parseCSV = (text: string) => {
-    const lines = text.split('\n');
-    return lines
-      .map(line => line.split(',').map(cell => cell.trim()))
-      .filter(row => row.length > 1 && row[0] !== '');
-  };
-
-  // 1. परिवार मुखिया बल्क अपलोड
-  const handleHeadUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'head' | 'member') => {
+    const file = event.target.files?.[0];
     if (!file) return;
 
     setLoading(true);
-    setStatusMessage('⌛ मुखिया डेटा अपलोड हो रहा है...');
+    let successCount = 0;
+    let errorCount = 0;
+    let errorMessages: string[] = [];
 
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      try {
-        const text = evt.target?.result as string;
-        const rows = parseCSV(text);
-        
-        // पहली लाइन हेडर (Columns) की होगी, उसे छोड़ देंगे
-        let count = 0;
-        for (let i = 1; i < rows.length; i++) {
-          const [familyID, name, fatherName, gotra, villageCity, area, mobile, bloodGroup] = rows[i];
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+          if (jsonData.length === 0) {
+            alert('❌ File is empty!');
+            setLoading(false);
+            return;
+          }
+
+          if (!window.confirm(`Are you sure you want to import ${jsonData.length} records?`)) {
+            setLoading(false);
+            return;
+          }
+
+          for (const row of jsonData) {
+            try {
+              const familyID = row['FamilyID']?.toString().trim() || row['Family ID']?.toString().trim();
+              
+              if (!familyID) {
+                errorCount++;
+                errorMessages.push(`Missing FamilyID for row: ${JSON.stringify(row)}`);
+                continue;
+              }
+
+              const familyQuery = query(collection(db, 'members'), where("familyID", "==", familyID));
+              const familySnapshot = await getDocs(familyQuery);
+              
+              let familyExists = false;
+              familySnapshot.forEach((doc) => {
+                if (doc.data().isHead === true) {
+                  familyExists = true;
+                }
+              });
+
+              if (type === 'head') {
+                if (familyExists) {
+                  errorCount++;
+                  errorMessages.push(`Family ID ${familyID} already exists. Skipping.`);
+                  continue;
+                }
+
+                const memberData: any = {
+                  familyID: familyID,
+                  memberNo: row['MemberNo']?.toString() || row['Member No']?.toString() || '01',
+                  name: row['Name']?.toString() || row['नाम']?.toString() || '',
+                  fatherName: row['FatherName']?.toString() || row['पिता का नाम']?.toString() || '',
+                  gotra: row['Gotra']?.toString() || row['गोत्र']?.toString() || '',
+                  relationToHead: 'खुद',
+                  dob: '',
+                  age_years: '',
+                  age_months: '',
+                  gender: '',
+                  maritalStatus: '',
+                  education: '',
+                  occupation: '',
+                  villageCity: row['VillageCity']?.toString() || row['गाँव']?.toString() || row['Village']?.toString() || '',
+                  area: row['Area']?.toString() || row['एरिया']?.toString() || '',
+                  address: '',
+                  mobile1: row['Mobile']?.toString() || row['मोबाइल']?.toString() || '',
+                  mobile2: row['Mobile2']?.toString() || row['मोबाइल 2']?.toString() || '',
+                  bloodGroup: row['BloodGroup']?.toString() || row['ब्लड ग्रुप']?.toString() || '',
+                  isStudent: false,
+                  isHead: true,
+                  createdAt: new Date()
+                };
+
+                if (!memberData.name) {
+                  errorCount++;
+                  errorMessages.push(`Name is required for Family ID ${familyID}`);
+                  continue;
+                }
+
+                await addDoc(collection(db, 'members'), memberData);
+                successCount++;
+              } else {
+                if (!familyExists) {
+                  errorCount++;
+                  errorMessages.push(`Family ID ${familyID} does not exist. Please add family head first.`);
+                  continue;
+                }
+
+                const memberData: any = {
+                  familyID: familyID,
+                  memberNo: row['MemberNo']?.toString() || row['सदस्य क्र.']?.toString() || row['Member No']?.toString() || '',
+                  name: row['Name']?.toString() || row['नाम']?.toString() || '',
+                  fatherName: row['FatherName']?.toString() || row['पिता/पति नाम']?.toString() || row['Father']?.toString() || '',
+                  gotra: row['Gotra']?.toString() || row['गोत्र']?.toString() || '',
+                  relationToHead: row['Relation']?.toString() || row['संबंध']?.toString() || '',
+                  dob: row['DOB']?.toString() || row['जन्म तिथि']?.toString() || '',
+                  age_years: row['Age']?.toString() || row['उम्र']?.toString() || '',
+                  age_months: '',
+                  gender: row['Gender']?.toString() || row['लिंग']?.toString() || '',
+                  maritalStatus: row['MaritalStatus']?.toString() || row['मैरिटल स्टेटस']?.toString() || '',
+                  education: row['Education']?.toString() || row['शिक्षा']?.toString() || '',
+                  occupation: row['Occupation']?.toString() || row['व्यवसाय']?.toString() || '',
+                  villageCity: row['VillageCity']?.toString() || row['गाँव']?.toString() || row['Village']?.toString() || '',
+                  area: row['Area']?.toString() || row['एरिया']?.toString() || '',
+                  address: row['Address']?.toString() || row['पूरा पता']?.toString() || '',
+                  mobile1: row['Mobile']?.toString() || row['मोबाइल']?.toString() || '',
+                  mobile2: row['Mobile2']?.toString() || row['मोबाइल 2']?.toString() || '',
+                  bloodGroup: row['BloodGroup']?.toString() || row['ब्लड ग्रुप']?.toString() || '',
+                  isStudent: row['IsStudent']?.toString()?.toLowerCase() === 'yes' || row['क्या छात्र है']?.toString()?.toLowerCase() === 'yes',
+                  isHead: false,
+                  createdAt: new Date()
+                };
+
+                if (!memberData.name) {
+                  errorCount++;
+                  errorMessages.push(`Name is required for member in Family ID ${familyID}`);
+                  continue;
+                }
+
+                await addDoc(collection(db, 'members'), memberData);
+                successCount++;
+              }
+            } catch (rowError: any) {
+              errorCount++;
+              errorMessages.push(`Error in row: ${rowError.message}`);
+              console.error('Row import error:', rowError);
+            }
+          }
+
+          let message = `✅ Import Complete!\n`;
+          message += `Successfully imported: ${successCount} records\n`;
+          if (errorCount > 0) {
+            message += `Failed: ${errorCount} records\n\n`;
+            message += `Errors:\n${errorMessages.slice(0, 5).join('\n')}`;
+            if (errorMessages.length > 5) {
+              message += `\n... and ${errorMessages.length - 5} more errors`;
+            }
+          }
+          alert(message);
           
-          if (!familyID || !name) continue; // जरूरी फील्ड्स
-
-          await addDoc(collection(db, 'members'), {
-            familyID: familyID,
-            name: name,
-            fatherName: fatherName || '',
-            gotra: gotra || '',
-            villageCity: villageCity || '',
-            area: area || '',
-            mobile: mobile || '',
-            bloodGroup: bloodGroup || '',
-            isHead: true,
-            relationToHead: 'स्वयं मुखिया'
-          });
-          count++;
+          if (successCount > 0) {
+            onRefresh();
+          }
+        } catch (error: any) {
+          console.error('Import error:', error);
+          alert(`❌ Import failed: ${error.message}`);
+        } finally {
+          setLoading(false);
         }
-
-        setStatusMessage(`✅ सफलता: ${count} नए परिवार मुखिया अपलोड हो गए!`);
-        onRefresh();
-      } catch (err) {
-        console.error(err);
-        setStatusMessage('❌ अपलोड में कुछ गड़बड़ हुई। फाइल चेक करें।');
-      } finally {
-        setLoading(false);
-      }
-    };
-    reader.readAsText(file);
-  };
-
-  // 2. परिवार सदस्य बल्क अपलोड
-  const handleMemberUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setLoading(true);
-    setStatusMessage('⌛ सदस्यों का डेटा अपलोड हो रहा है...');
-
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      try {
-        const text = evt.target?.result as string;
-        const rows = parseCSV(text);
-        
-        let count = 0;
-        for (let i = 1; i < rows.length; i++) {
-          const [
-            familyID, memberSerial, name, fatherHusbandName, gotra, relationToHead,
-            dob, age_years, gender, maritalStatus, education, occupation,
-            villageCity, area, address, mobile, bloodGroup, isStudentRaw
-          ] = rows[i];
-
-          if (!familyID || !name) continue;
-
-          await addDoc(collection(db, 'members'), {
-            familyID: familyID,
-            memberSerial: memberSerial || '',
-            name: name,
-            fatherHusbandName: fatherHusbandName || '',
-            gotra: gotra || '',
-            relationToHead: relationToHead || 'सदस्य',
-            dob: dob || '',
-            age_years: age_years || '',
-            gender: gender || '',
-            maritalStatus: maritalStatus || '',
-            education: education || '',
-            occupation: occupation || '',
-            villageCity: villageCity || '',
-            area: area || '',
-            address: address || '',
-            mobile: mobile || '',
-            bloodGroup: bloodGroup || '',
-            isStudent: isStudentRaw?.toLowerCase() === 'yes' || isStudentRaw === 'हाँ',
-            isHead: false
-          });
-          count++;
-        }
-
-        setStatusMessage(`✅ सफलता: ${count} परिवार सदस्य अपलोड हो गए!`);
-        onRefresh();
-      } catch (err) {
-        console.error(err);
-        setStatusMessage('❌ अपलोड में कुछ गड़बड़ हुई। फाइल चेक करें।');
-      } finally {
-        setLoading(false);
-      }
-    };
-    reader.readAsText(file);
+      };
+      reader.readAsArrayBuffer(file);
+    } catch (error: any) {
+      console.error('Import error:', error);
+      alert(`❌ Import failed: ${error.message}`);
+      setLoading(false);
+    }
   };
 
   return (
-    <div style={{
-      background: '#ffffff',
-      padding: '20px',
-      borderRadius: '12px',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-      marginBottom: '30px',
-      border: '1px solid #e2e8f0',
-      fontFamily: "'Noto Sans', sans-serif"
-    }}>
-      <h3 style={{ marginTop: 0, color: '#1e3a8a', borderBottom: '2px solid #f1f5f9', paddingBottom: '10px' }}>
-        🚀 एक्सपोर्ट/इम्पोर्ट सेंटर (Bulk Entry Console)
-      </h3>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginTop: '15px' }}>
-        
-        {/* कार्ड 1: मुखिया इम्पोर्ट */}
-        <div style={{ background: '#f0fdf4', padding: '15px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
-          <h4 style={{ margin: '0 0 10px 0', color: '#16a34a' }}>🏠 1. मुखिया लिस्ट अपलोड करें</h4>
-          <p style={{ fontSize: '12px', color: '#166534', margin: '0 0 12px 0' }}>कॉलम क्रम: FamilyID, नाम, पिता का नाम, गोत्र, गाँव, एरिया, मोबाइल, ब्लड ग्रुप</p>
-          <input 
-            type="file" 
-            accept=".csv" 
+    <>
+      {/* Upload Family List - Only Choose file */}
+      <div className="options-dropdown-item" style={{ cursor: 'pointer', position: 'relative', padding: '4px 16px' }}>
+        <label style={{ cursor: 'pointer', width: '100%', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+          <span>📁 Upload Family List</span>
+          <input
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            onChange={(e) => handleFileUpload(e, 'head')}
+            style={{ position: 'absolute', opacity: 0, cursor: 'pointer', width: '100%', height: '100%', left: 0, top: 0 }}
             disabled={loading}
-            onChange={handleHeadUpload}
-            style={{ fontSize: '13px', width: '100%' }}
           />
-        </div>
-
-        {/* कार्ड 2: सदस्य इम्पोर्ट */}
-        <div style={{ background: '#eff6ff', padding: '15px', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
-          <h4 style={{ margin: '0 0 10px 0', color: '#2563eb' }}>👥 2. सदस्य लिस्ट अपलोड करें</h4>
-          <p style={{ fontSize: '12px', color: '#1e40af', margin: '0 0 12px 0' }}>कॉलम क्रम: FamilyID, सदस्य क्र., नाम, पिता/पति नाम, गोत्र, संबंध, DOB, उम्र, लिंग, मैरिटल स्टेटस, शिक्षा, व्यवसाय, गाँव, एरिया, पूरा पता, मोबाइल, ब्लड ग्रुप, क्या छात्र है(Yes/No)</p>
-          <input 
-            type="file" 
-            accept=".csv" 
-            disabled={loading}
-            onChange={handleMemberUpload}
-            style={{ fontSize: '13px', width: '100%' }}
-          />
-        </div>
-
+          {loading && <span style={{ fontSize: '12px', color: '#3b82f6' }}>⏳</span>}
+        </label>
       </div>
-
-      {statusMessage && (
-        <div style={{
-          marginTop: '15px',
-          padding: '10px 15px',
-          borderRadius: '6px',
-          background: '#f8fafc',
-          border: '1px solid #cbd5e1',
-          fontSize: '14px',
-          fontWeight: 'bold',
-          color: '#334155',
-          textAlign: 'center'
-        }}>
-          {statusMessage}
-        </div>
-      )}
-    </div>
+      
+      {/* Upload Members List - Only Choose file */}
+      <div className="options-dropdown-item" style={{ cursor: 'pointer', position: 'relative', padding: '4px 16px' }}>
+        <label style={{ cursor: 'pointer', width: '100%', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+          <span>📁 Upload Members List</span>
+          <input
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            onChange={(e) => handleFileUpload(e, 'member')}
+            style={{ position: 'absolute', opacity: 0, cursor: 'pointer', width: '100%', height: '100%', left: 0, top: 0 }}
+            disabled={loading}
+          />
+          {loading && <span style={{ fontSize: '12px', color: '#3b82f6' }}>⏳</span>}
+        </label>
+      </div>
+    </>
   );
 }
