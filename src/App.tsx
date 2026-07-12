@@ -44,8 +44,9 @@ export default function App() {
   const [isFamilyFormOpen, setIsFamilyFormOpen] = useState(false);
   const [isMemberFormOpen, setIsMemberFormOpen] = useState(false);
 
-  const [showFamilyList, setShowFamilyList] = useState(false);
-  const [showAllMembersList, setShowAllMembersList] = useState(false);
+  // ✅ डिफॉल्ट true कर दिया ताकि डेटा दिखे
+  const [showFamilyList, setShowFamilyList] = useState(true);
+  const [showAllMembersList, setShowAllMembersList] = useState(true);
   const [showSearchBox, setShowSearchBox] = useState(false);
   const [showCommitteeList, setShowCommitteeList] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -97,12 +98,19 @@ export default function App() {
   // ============================================================
   const fetchData = async () => {
     try {
+      console.log("🔄 Fetching data from Firebase...");
       const memberSnapshot = await getDocs(collection(db, 'members'));
-      setMembers(memberSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const membersData = memberSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      console.log("✅ Members loaded:", membersData.length);
+      setMembers(membersData);
+      
       const committeeSnapshot = await getDocs(collection(db, 'committee'));
-      setCommittee(committeeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const committeeData = committeeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      console.log("✅ Committee loaded:", committeeData.length);
+      setCommittee(committeeData);
     } catch (error) {
-      console.error("Error fetching data: ", error);
+      console.error("❌ Error fetching data: ", error);
+      alert("❌ डेटा लोड करने में गड़बड़ी! कृपया Firebase Config चेक करें।");
     }
   };
 
@@ -129,6 +137,39 @@ export default function App() {
   };
 
   // ============================================================
+  // COMMITTEE EDIT FUNCTIONS
+  // ============================================================
+  const openCommitteeEditModal = (member: any) => {
+    setEditingCommitteeMember(member);
+    setCommitteeEditFormData({
+      designation: member.designation || '',
+      name: member.name || '',
+      gotra: member.gotra || '',
+      mobile: member.mobile || '',
+      tenure: member.tenure || '',
+    });
+    setIsCommitteeEditModalOpen(true);
+  };
+
+  const handleCommitteeEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCommitteeMember) return;
+
+    try {
+      await updateDoc(doc(db, 'committee', editingCommitteeMember.id), {
+        ...committeeEditFormData,
+      });
+      alert('✅ पदाधिकारी की जानकारी अपडेट कर दी गई है!');
+      fetchData();
+      setIsCommitteeEditModalOpen(false);
+      setEditingCommitteeMember(null);
+    } catch (error) {
+      console.error(error);
+      alert('❌ कुछ गड़बड़ हुई, कृपया पुनः प्रयास करें।');
+    }
+  };
+
+  // ============================================================
   // SECTION 3.5: IMPORT FUNCTIONS
   // ============================================================
   const handleFamilyImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -138,7 +179,8 @@ export default function App() {
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data, { type: 'array' });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const json = XLSX.utils.sheet_to_json(sheet);
+      const json: any[] = XLSX.utils.sheet_to_json(sheet);
+      
       for (const row of json) {
         await addDoc(collection(db, 'members'), {
           name: row['Name'] || row['नाम'] || '',
@@ -168,7 +210,8 @@ export default function App() {
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data, { type: 'array' });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const json = XLSX.utils.sheet_to_json(sheet);
+      const json: any[] = XLSX.utils.sheet_to_json(sheet);
+      
       for (const row of json) {
         await addDoc(collection(db, 'members'), {
           name: row['Name'] || row['नाम'] || '',
@@ -190,37 +233,6 @@ export default function App() {
       alert('❌ इम्पोर्ट में गड़बड़ी!');
     }
     e.target.value = '';
-  };
-
-  // Committee Edit Functions
-  const openCommitteeEditModal = (member: any) => {
-    setEditingCommitteeMember(member);
-    setCommitteeEditFormData({
-      designation: member.designation || '',
-      name: member.name || '',
-      gotra: member.gotra || '',
-      mobile: member.mobile || '',
-      tenure: member.tenure || '',
-    });
-    setIsCommitteeEditModalOpen(true);
-  };
-
-  const handleCommitteeEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingCommitteeMember) return;
-
-    try {
-      await updateDoc(doc(db, 'committee', editingCommitteeMember.id), {
-        ...committeeEditFormData,
-      });
-      alert('✅ पदाधिकारी की जानकारी अपडेट कर दी गई है!');
-      fetchData();
-      setIsCommitteeEditModalOpen(false);
-      setEditingCommitteeMember(null);
-    } catch (error) {
-      console.error(error);
-      alert('❌ कुछ गड़बड़ हुई, कृपया पुनः प्रयास करें।');
-    }
   };
 
   // ============================================================
@@ -1625,7 +1637,7 @@ export default function App() {
   };
 
   // ============================================================
-  // SECTION 13: SEARCH POPUP COMPONENT (Family)
+  // SECTION 13: SEARCH POPUP COMPONENT (Family) - SIMPLIFIED
   // ============================================================
   const FamilySearchPopup = () => {
     if (!showFamilySearchPopup) return null;
@@ -1648,7 +1660,7 @@ export default function App() {
           background: 'white',
           borderRadius: '16px',
           padding: '25px',
-          maxWidth: '700px',
+          maxWidth: '600px',
           width: '100%',
           maxHeight: '90vh',
           overflowY: 'auto',
@@ -1713,29 +1725,8 @@ export default function App() {
                 }}
               >
                 <option value="">सभी</option>
-                {getUniqueValues('villageCity').map((v) => (
+                {getUniqueValues('villageCity').map((v: any) => (
                   <option key={v} value={v}>{v}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>एरिया/कॉलोनी</label>
-              <select
-                value={familySearchArea}
-                onChange={(e) => setFamilySearchArea(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '6px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid #cbd5e1',
-                  fontSize: '13px',
-                  boxSizing: 'border-box',
-                }}
-              >
-                <option value="">सभी</option>
-                {getUniqueValues('area').map((a) => (
-                  <option key={a} value={a}>{a}</option>
                 ))}
               </select>
             </div>
@@ -1755,7 +1746,7 @@ export default function App() {
                 }}
               >
                 <option value="">सभी</option>
-                {getUniqueValues('gotra').map((g) => (
+                {getUniqueValues('gotra').map((g: any) => (
                   <option key={g} value={g}>{g}</option>
                 ))}
               </select>
@@ -1776,50 +1767,8 @@ export default function App() {
                 }}
               >
                 <option value="">सभी</option>
-                {getUniqueValues('gender').map((g) => (
+                {getUniqueValues('gender').map((g: any) => (
                   <option key={g} value={g}>{g}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>वैवाहिक स्थिति</label>
-              <select
-                value={familySearchMarital}
-                onChange={(e) => setFamilySearchMarital(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '6px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid #cbd5e1',
-                  fontSize: '13px',
-                  boxSizing: 'border-box',
-                }}
-              >
-                <option value="">सभी</option>
-                {getUniqueValues('maritalStatus').map((m) => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>काम/व्यवसाय</label>
-              <select
-                value={familySearchOccupation}
-                onChange={(e) => setFamilySearchOccupation(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '6px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid #cbd5e1',
-                  fontSize: '13px',
-                  boxSizing: 'border-box',
-                }}
-              >
-                <option value="">सभी</option>
-                {getUniqueValues('occupation').map((o) => (
-                  <option key={o} value={o}>{o}</option>
                 ))}
               </select>
             </div>
@@ -1839,7 +1788,7 @@ export default function App() {
                 }}
               >
                 <option value="">सभी</option>
-                {getUniqueValues('education').map((e) => (
+                {getUniqueValues('education').map((e: any) => (
                   <option key={e} value={e}>{e}</option>
                 ))}
               </select>
@@ -1918,7 +1867,7 @@ export default function App() {
   };
 
   // ============================================================
-  // SECTION 14: SEARCH POPUP COMPONENT (Members)
+  // SECTION 14: SEARCH POPUP COMPONENT (Members) - SIMPLIFIED
   // ============================================================
   const MemberSearchPopup = () => {
     if (!showMemberSearchPopup) return null;
@@ -1941,7 +1890,7 @@ export default function App() {
           background: 'white',
           borderRadius: '16px',
           padding: '25px',
-          maxWidth: '700px',
+          maxWidth: '600px',
           width: '100%',
           maxHeight: '90vh',
           overflowY: 'auto',
@@ -2006,29 +1955,8 @@ export default function App() {
                 }}
               >
                 <option value="">सभी</option>
-                {getUniqueValues('villageCity').map((v) => (
+                {getUniqueValues('villageCity').map((v: any) => (
                   <option key={v} value={v}>{v}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>एरिया/कॉलोनी</label>
-              <select
-                value={memberSearchArea}
-                onChange={(e) => setMemberSearchArea(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '6px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid #cbd5e1',
-                  fontSize: '13px',
-                  boxSizing: 'border-box',
-                }}
-              >
-                <option value="">सभी</option>
-                {getUniqueValues('area').map((a) => (
-                  <option key={a} value={a}>{a}</option>
                 ))}
               </select>
             </div>
@@ -2048,7 +1976,7 @@ export default function App() {
                 }}
               >
                 <option value="">सभी</option>
-                {getUniqueValues('gotra').map((g) => (
+                {getUniqueValues('gotra').map((g: any) => (
                   <option key={g} value={g}>{g}</option>
                 ))}
               </select>
@@ -2069,50 +1997,8 @@ export default function App() {
                 }}
               >
                 <option value="">सभी</option>
-                {getUniqueValues('gender').map((g) => (
+                {getUniqueValues('gender').map((g: any) => (
                   <option key={g} value={g}>{g}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>वैवाहिक स्थिति</label>
-              <select
-                value={memberSearchMarital}
-                onChange={(e) => setMemberSearchMarital(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '6px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid #cbd5e1',
-                  fontSize: '13px',
-                  boxSizing: 'border-box',
-                }}
-              >
-                <option value="">सभी</option>
-                {getUniqueValues('maritalStatus').map((m) => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>काम/व्यवसाय</label>
-              <select
-                value={memberSearchOccupation}
-                onChange={(e) => setMemberSearchOccupation(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '6px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid #cbd5e1',
-                  fontSize: '13px',
-                  boxSizing: 'border-box',
-                }}
-              >
-                <option value="">सभी</option>
-                {getUniqueValues('occupation').map((o) => (
-                  <option key={o} value={o}>{o}</option>
                 ))}
               </select>
             </div>
@@ -2132,7 +2018,7 @@ export default function App() {
                 }}
               >
                 <option value="">सभी</option>
-                {getUniqueValues('education').map((e) => (
+                {getUniqueValues('education').map((e: any) => (
                   <option key={e} value={e}>{e}</option>
                 ))}
               </select>
@@ -2214,1650 +2100,1364 @@ export default function App() {
   // SECTION 15: MAIN RETURN
   // ============================================================
   return (
-    <>
+    <div
+      style={{
+        padding: '20px',
+        fontFamily: "'Noto Sans', 'Poppins', sans-serif",
+        maxWidth: '1000px',
+        margin: '0 auto',
+        background: '#f8f9fa',
+      }}
+    >
+      {/* HEADER */}
       <div
         style={{
-          padding: '20px',
-          fontFamily: "'Noto Sans', 'Poppins', sans-serif",
-          maxWidth: '1000px',
-          margin: '0 auto',
-          background: '#f8f9fa',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          marginBottom: '30px',
+          padding: '8px 10px 16px 10px',
+          borderBottom: '2px solid #e2e8f0',
+          width: '100%',
         }}
       >
-        {/* HEADER */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '40px', lineHeight: '1' }}>🏛️</span>
+          <div>
+            <h1
+              style={{
+                margin: '0',
+                fontSize: '2.2rem',
+                fontWeight: '800',
+                lineHeight: '1.2',
+                letterSpacing: '1px',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                textShadow: '0 2px 12px rgba(102, 126, 234, 0.25)',
+                fontFamily: "'Playfair Display', serif",
+                paddingBottom: '2px',
+              }}
+            >
+              Chhipa Samaj Jaipur
+            </h1>
+            <h2
+              style={{
+                margin: '-4px 0 0 0',
+                fontSize: '1.2rem',
+                fontWeight: '700',
+                letterSpacing: '4px',
+                fontStyle: 'italic',
+                background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                textShadow: '0 2px 10px rgba(245, 87, 108, 0.2)',
+                fontFamily: "'Playfair Display', serif",
+              }}
+            >
+              Digital Directory
+            </h2>
+          </div>
+        </div>
+        <button
+          onClick={() => setShowSettings(!showSettings)}
+          style={{
+            background: showSettings ? '#e2e8f0' : 'transparent',
+            border: 'none',
+            fontSize: '2.2rem',
+            cursor: 'pointer',
+            padding: '5px 10px',
+            borderRadius: '8px',
+            transition: 'background 0.3s',
+          }}
+          title="Settings"
+        >
+          ⚙️
+        </button>
+      </div>
+
+      {/* SETTINGS PANEL */}
+      {showSettings && (
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
+            background: 'white',
+            padding: '20px',
+            borderRadius: '12px',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
             marginBottom: '30px',
-            padding: '8px 10px 16px 10px',
-            borderBottom: '2px solid #e2e8f0',
-            width: '100%',
+            border: '1px solid #cbd5e1',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '40px', lineHeight: '1' }}>🏛️</span>
-            <div>
-              <h1
+          <h3
+            style={{
+              marginTop: 0,
+              color: '#1e3a8a',
+              borderBottom: '2px solid #e2e8f0',
+              paddingBottom: '10px',
+            }}
+          >
+            ⚙️ सेटिंग्स
+          </h3>
+          <div style={{ marginBottom: '20px' }}>
+            <h4 style={{ color: '#334155', marginBottom: '10px' }}>📥 Public Downloads</h4>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+              <button
+                onClick={() => generatePDF('families')}
                 style={{
-                  margin: '0',
-                  fontSize: '2.2rem',
-                  fontWeight: '800',
-                  lineHeight: '1.2',
-                  letterSpacing: '1px',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  textShadow: '0 2px 12px rgba(102, 126, 234, 0.25)',
-                  fontFamily: "'Playfair Display', serif",
-                  paddingBottom: '2px',
+                  padding: '8px 16px',
+                  background: '#8b5cf6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
                 }}
               >
-                Chhipa Samaj Jaipur
-              </h1>
-              <h2
+                🏠 परिवार लिस्ट
+              </button>
+              <button
+                onClick={() => generatePDF('committee')}
                 style={{
-                  margin: '-4px 0 0 0',
-                  fontSize: '1.2rem',
-                  fontWeight: '700',
-                  letterSpacing: '4px',
-                  fontStyle: 'italic',
-                  background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  textShadow: '0 2px 10px rgba(245, 87, 108, 0.2)',
-                  fontFamily: "'Playfair Display', serif",
+                  padding: '8px 16px',
+                  background: '#f59e0b',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
                 }}
               >
-                Digital Directory
-              </h2>
+                🏢 कमेटी लिस्ट
+              </button>
             </div>
           </div>
+          <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                marginBottom: '10px',
+              }}
+            >
+              <h4 style={{ color: '#334155', margin: 0 }}>🔐 Admin Area</h4>
+              {isAdmin ? (
+                <button
+                  onClick={handleAdminLogout}
+                  style={{
+                    padding: '4px 12px',
+                    background: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Logout
+                </button>
+              ) : (
+                <button
+                  onClick={handleAdminLogin}
+                  style={{
+                    padding: '4px 12px',
+                    background: '#3b82f6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Admin Login
+                </button>
+              )}
+            </div>
+            {isAdmin ? (
+              <div>
+                <p style={{ color: '#16a34a', fontWeight: 'bold' }}>✅ Admin मोड सक्रिय है</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '12px' }}>
+                  <button
+                    onClick={() => generatePDF('all_members')}
+                    style={{
+                      padding: '8px 16px',
+                      background: '#667eea',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    📋 सभी सदस्य
+                  </button>
+                  <button
+                    onClick={() => generatePDF('students')}
+                    style={{
+                      padding: '8px 16px',
+                      background: '#06b6d4',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    🎓 छात्र/छात्राएं
+                  </button>
+                </div>
+                <div style={{ marginTop: '10px' }}>
+                  <button
+                    style={{
+                      padding: '8px 16px',
+                      background: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      position: 'relative',
+                    }}
+                  >
+                    📤 Import Family
+                    <input
+                      type="file"
+                      accept=".xlsx,.xls,.csv"
+                      onChange={handleFamilyImport}
+                      style={{
+                        position: 'absolute',
+                        opacity: 0,
+                        cursor: 'pointer',
+                        width: '100%',
+                        height: '100%',
+                        left: 0,
+                        top: 0,
+                      }}
+                    />
+                  </button>
+                  <button
+                    style={{
+                      padding: '8px 16px',
+                      background: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      position: 'relative',
+                      marginLeft: '10px',
+                    }}
+                  >
+                    📤 Import Members
+                    <input
+                      type="file"
+                      accept=".xlsx,.xls,.csv"
+                      onChange={handleMemberImport}
+                      style={{
+                        position: 'absolute',
+                        opacity: 0,
+                        cursor: 'pointer',
+                        width: '100%',
+                        height: '100%',
+                        left: 0,
+                        top: 0,
+                      }}
+                    />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p style={{ color: '#64748b', fontStyle: 'italic' }}>
+                Admin लॉगिन करें ताकि आप सभी सदस्य, छात्र लिस्ट डाउनलोड कर सकें और Excel/CSV बल्क
+                इम्पोर्ट का उपयोग कर सकें।
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* BIRTHDAY NOTIFICATION */}
+      {birthdayFolks.length > 0 && (
+        <div
+          style={{
+            background: '#fff3cd',
+            border: '1px solid #ffeeba',
+            color: '#856404',
+            padding: '15px',
+            borderRadius: '8px',
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+          }}
+        >
+          <span style={{ fontSize: '24px' }}>🎉</span>
+          <div>
+            <strong>आज समाज में उत्सव का दिन है!</strong> निम्नलिखित सदस्यों को जन्मदिन की हार्दिक
+            बधाई:
+            <span style={{ marginLeft: '10px', fontWeight: 'bold', color: '#d9534f' }}>
+              {birthdayFolks.map((f) => `${f.name} (Family ID: ${f.familyID})`).join(', ')}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* DASHBOARD CARDS */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: '12px',
+          marginBottom: '20px',
+          maxWidth: '550px',
+          marginLeft: 'auto',
+          marginRight: 'auto',
+        }}
+      >
+        <div
+          style={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: '14px',
+            padding: '12px 8px',
+            textAlign: 'center',
+            color: 'white',
+            boxShadow: '0 4px 15px rgba(102, 126, 234, 0.35)',
+          }}
+        >
+          <div style={{ fontSize: '28px' }}>🏠</div>
+          <div style={{ fontSize: '16px', fontWeight: '600', opacity: 0.9 }}>परिवार</div>
+          <div style={{ fontSize: '28px', fontWeight: '800' }}>{totalFamilies}</div>
+        </div>
+        <div
+          style={{
+            background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+            borderRadius: '14px',
+            padding: '12px 8px',
+            textAlign: 'center',
+            color: 'white',
+            boxShadow: '0 4px 15px rgba(17, 153, 142, 0.35)',
+          }}
+        >
+          <div style={{ fontSize: '28px' }}>👥</div>
+          <div style={{ fontSize: '16px', fontWeight: '600', opacity: 0.9 }}>कुल सदस्य</div>
+          <div style={{ fontSize: '28px', fontWeight: '800' }}>{totalMembers}</div>
+        </div>
+        <div
+          style={{
+            background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+            borderRadius: '14px',
+            padding: '12px 8px',
+            textAlign: 'center',
+            color: 'white',
+            boxShadow: '0 4px 15px rgba(245, 87, 108, 0.35)',
+          }}
+        >
+          <div style={{ fontSize: '28px' }}>👶</div>
+          <div style={{ fontSize: '16px', fontWeight: '600', opacity: 0.9 }}>बच्चे (&lt;10)</div>
+          <div style={{ fontSize: '28px', fontWeight: '800' }}>{totalKids}</div>
+        </div>
+        <div
+          style={{
+            background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+            borderRadius: '14px',
+            padding: '12px 8px',
+            textAlign: 'center',
+            color: 'white',
+            boxShadow: '0 4px 15px rgba(79, 172, 254, 0.35)',
+          }}
+        >
+          <div style={{ fontSize: '28px' }}>👨</div>
+          <div style={{ fontSize: '16px', fontWeight: '600', opacity: 0.9 }}>बड़े सदस्य</div>
+          <div style={{ fontSize: '28px', fontWeight: '800' }}>{totalAdults}</div>
+        </div>
+        <div
+          style={{
+            background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+            borderRadius: '14px',
+            padding: '12px 8px',
+            textAlign: 'center',
+            color: 'white',
+            boxShadow: '0 4px 15px rgba(250, 112, 154, 0.35)',
+          }}
+        >
+          <div style={{ fontSize: '28px' }}>🎓</div>
+          <div style={{ fontSize: '16px', fontWeight: '600', opacity: 0.9 }}>छात्र</div>
+          <div style={{ fontSize: '28px', fontWeight: '800' }}>{totalStudents}</div>
+        </div>
+      </div>
+
+      {/* VIEW TOGGLE */}
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+        <button
+          onClick={() => setViewMode(viewMode === 'card' ? 'list' : 'card')}
+          style={{
+            padding: '4px 12px',
+            background: '#667eea',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            fontSize: '12px',
+            boxShadow: '0 2px 6px rgba(102, 126, 234, 0.3)',
+          }}
+        >
+          {viewMode === 'card' ? '📋 लिस्ट व्यू' : '🃏 कार्ड व्यू'}
+        </button>
+      </div>
+
+      <hr style={{ margin: '35px 0', borderColor: '#e2e8f0' }} />
+
+      {/* =========================================================
+          SECTION 19: UTILITY BUTTONS - CLEAN BUTTONS
+      ========================================================= */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: '20px',
+          marginBottom: '30px',
+        }}
+      >
+        {/* समाज कमेटी */}
+        <div style={cardWrapperStyle}>
           <button
-            onClick={() => setShowSettings(!showSettings)}
+            onClick={() => setShowCommitteeList(!showCommitteeList)}
             style={{
-              background: showSettings ? '#e2e8f0' : 'transparent',
+              width: '100%',
+              padding: '14px 18px',
+              background: '#f59e0b',
+              color: 'white',
               border: 'none',
-              fontSize: '2.2rem',
-              cursor: 'pointer',
-              padding: '5px 10px',
               borderRadius: '8px',
-              transition: 'background 0.3s',
+              cursor: 'pointer',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              fontFamily: "'Poppins', 'Noto Sans', sans-serif",
+              transition: 'all 0.3s ease',
             }}
-            title="Settings"
           >
-            ⚙️
+            🏢 समाज कमेटी
           </button>
+
+          {showCommitteeList && (
+            <div
+              style={{
+                marginTop: '15px',
+                border: '1px solid #fcd34d',
+                borderRadius: '12px',
+                padding: '15px',
+                background: '#fffbeb',
+                overflowX: 'auto',
+              }}
+            >
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '10px',
+                marginBottom: '15px',
+                borderBottom: '2px solid #fde68a',
+                paddingBottom: '12px',
+              }}>
+                <h2 style={{ margin: 0, color: '#d97706', fontSize: '18px' }}>
+                  🏢 समाज कमेटी
+                </h2>
+                
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <button
+                    onClick={() => setShowCommitteeOptionsDropdown(!showCommitteeOptionsDropdown)}
+                    style={{
+                      padding: '6px 10px',
+                      background: 'white',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '16px',
+                      fontWeight: 'bold',
+                      color: '#333',
+                      minWidth: '36px',
+                      height: '36px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    title="विकल्प"
+                  >
+                    ⋯
+                  </button>
+                  <button
+                    onClick={() => setIsCommitteeFormOpen(true)}
+                    style={{
+                      padding: '6px 10px',
+                      background: 'white',
+                      color: '#333',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '18px',
+                      fontWeight: 'bold',
+                      minWidth: '36px',
+                      height: '36px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    title="जोड़ें"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              {showCommitteeOptionsDropdown && (
+                <div style={{
+                  background: 'white',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+                  padding: '8px 0',
+                  marginBottom: '12px',
+                }}>
+                  <div style={{ padding: '4px 16px', fontWeight: 'bold', color: '#475569', fontSize: '12px' }}>
+                    Show As
+                  </div>
+                  <div
+                    onClick={() => { setCommitteeViewMode('list'); setShowCommitteeOptionsDropdown(false); }}
+                    style={{ padding: '4px 16px', cursor: 'pointer', fontSize: '13px' }}
+                  >
+                    <span style={{ color: committeeViewMode === 'list' ? '#f59e0b' : '#334155' }}>•</span> List
+                  </div>
+                  <div
+                    onClick={() => { setCommitteeViewMode('card'); setShowCommitteeOptionsDropdown(false); }}
+                    style={{ padding: '4px 16px', cursor: 'pointer', fontSize: '13px' }}
+                  >
+                    <span style={{ color: committeeViewMode === 'card' ? '#f59e0b' : '#334155' }}>•</span> Card
+                  </div>
+
+                  <div style={{ borderTop: '1px solid #e2e8f0', margin: '4px 16px' }}></div>
+
+                  <div style={{ padding: '4px 16px', fontWeight: 'bold', color: '#475569', fontSize: '12px' }}>
+                    Print
+                  </div>
+                  <div
+                    onClick={() => { generatePDF('committee'); setShowCommitteeOptionsDropdown(false); }}
+                    style={{ padding: '4px 16px', cursor: 'pointer', fontSize: '13px' }}
+                  >
+                    🖨️ Print as list
+                  </div>
+
+                  <div style={{ borderTop: '1px solid #e2e8f0', margin: '4px 16px' }}></div>
+
+                  <div style={{ padding: '4px 16px', fontWeight: 'bold', color: '#475569', fontSize: '12px' }}>
+                    Export
+                  </div>
+                  <div
+                    onClick={() => setShowCommitteeExportDropdown(!showCommitteeExportDropdown)}
+                    style={{ padding: '4px 16px', cursor: 'pointer', fontSize: '13px' }}
+                  >
+                    {showCommitteeExportDropdown ? '▼' : '▶'} Export formats
+                  </div>
+
+                  {showCommitteeExportDropdown && (
+                    <div style={{ paddingLeft: '16px' }}>
+                      {['XLSX', 'PDF', 'HTML', 'XML', 'JSON', 'CSV', 'TSV'].map((format) => (
+                        <div
+                          key={format}
+                          onClick={() => {
+                            exportCommitteeData(format.toLowerCase());
+                            setShowCommitteeOptionsDropdown(false);
+                            setShowCommitteeExportDropdown(false);
+                          }}
+                          style={{ padding: '4px 20px', cursor: 'pointer', fontSize: '12px' }}
+                        >
+                          {format}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {committee.length === 0 ? (
+                <p style={{ color: '#92400e', background: '#fef3c7', padding: '15px', borderRadius: '8px', textAlign: 'center' }}>
+                  कोई पदाधिकारी नहीं।
+                </p>
+              ) : (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: committeeViewMode === 'card' ? 'repeat(auto-fill, minmax(280px, 1fr))' : '1fr',
+                  gap: '12px',
+                }}>
+                  {committee.map((c) => (
+                    <div
+                      key={c.id}
+                      style={{
+                        padding: '12px 15px',
+                        background: committeeViewMode === 'card' ? '#f8fafc' : 'transparent',
+                        borderRadius: committeeViewMode === 'card' ? '10px' : '0',
+                        border: committeeViewMode === 'card' ? '1px solid #e2e8f0' : '1px solid #e2e8f0',
+                        borderBottom: committeeViewMode === 'card' ? '1px solid #e2e8f0' : 'none',
+                        display: committeeViewMode === 'card' ? 'block' : 'grid',
+                        gridTemplateColumns: committeeViewMode === 'card' ? '1fr' : 'repeat(auto-fit, minmax(120px, 1fr))',
+                        gap: '8px',
+                      }}
+                    >
+                      {committeeViewMode === 'card' ? (
+                        <>
+                          <div style={{ fontSize: '14px', color: '#ea580c', fontWeight: 'bold' }}>
+                            ⭐ {c.designation}
+                          </div>
+                          <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#1e293b' }}>
+                            {c.name}
+                          </div>
+                          {c.gotra && <div style={{ color: '#475569', fontSize: '14px' }}>गोत्र: {c.gotra}</div>}
+                          {c.mobile && (
+                            <div
+                              style={{ color: '#2563eb', cursor: 'pointer', textDecoration: 'underline', fontSize: '13px' }}
+                              onClick={() => dialPhone(c.mobile)}
+                            >
+                              📞 {c.mobile}
+                            </div>
+                          )}
+                          {c.tenure && <div style={{ color: '#64748b', fontSize: '12px' }}>कार्यकाल: {c.tenure}</div>}
+                          <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
+                            <button
+                              onClick={() => openCommitteeEditModal(c)}
+                              style={{ padding: '4px 10px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '4px', cursor: 'pointer', color: '#16a34a', fontSize: '12px' }}
+                            >
+                              ✏️ एडिट
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCommittee(c.id, c.name)}
+                              style={{ padding: '4px 10px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '4px', cursor: 'pointer', color: '#dc2626', fontSize: '12px' }}
+                            >
+                              🗑️ हटाएं
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <span><strong>पद:</strong> {c.designation}</span>
+                          <span><strong>नाम:</strong> {c.name}</span>
+                          <span><strong>गोत्र:</strong> {c.gotra || '-'}</span>
+                          <span><strong>मोबाइल:</strong> {c.mobile || '-'}</span>
+                          <span><strong>कार्यकाल:</strong> {c.tenure || '-'}</span>
+                          <span>
+                            <button onClick={() => openCommitteeEditModal(c)} style={{ padding: '2px 8px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '4px', cursor: 'pointer', color: '#16a34a', fontSize: '11px' }}>✏️</button>
+                            <button onClick={() => handleDeleteCommittee(c.id, c.name)} style={{ padding: '2px 8px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '4px', cursor: 'pointer', color: '#dc2626', fontSize: '11px', marginLeft: '4px' }}>🗑️</button>
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* SETTINGS PANEL */}
-        {showSettings && (
+        {/* सभी परिवार */}
+        <div style={cardWrapperStyle}>
+          <button
+            onClick={() => setShowFamilyList(!showFamilyList)}
+            style={{
+              width: '100%',
+              padding: '14px 18px',
+              background: '#8b5cf6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              fontFamily: "'Poppins', 'Noto Sans', sans-serif",
+              transition: 'all 0.3s ease',
+            }}
+          >
+            🏠 सभी परिवार
+          </button>
+
+          {showFamilyList && (
+            <div
+              style={{
+                marginTop: '15px',
+                background: 'white',
+                padding: '15px',
+                borderRadius: '12px',
+                border: '1px solid #c084fc',
+                maxHeight: '500px',
+                overflowY: 'auto',
+              }}
+            >
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '10px',
+                marginBottom: '15px',
+                borderBottom: '2px solid #ede9fe',
+                paddingBottom: '12px',
+              }}>
+                <h2 style={{ margin: 0, color: '#7c3aed', fontSize: '18px' }}>
+                  🏠 सभी परिवार
+                </h2>
+                
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <button
+                    onClick={() => setShowOptionsDropdown(!showOptionsDropdown)}
+                    style={{
+                      padding: '6px 10px',
+                      background: 'white',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '16px',
+                      fontWeight: 'bold',
+                      color: '#333',
+                      minWidth: '36px',
+                      height: '36px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    title="विकल्प"
+                  >
+                    ⋯
+                  </button>
+                  <button
+                    onClick={() => setIsFamilyFormOpen(true)}
+                    style={{
+                      padding: '6px 10px',
+                      background: 'white',
+                      color: '#333',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '18px',
+                      fontWeight: 'bold',
+                      minWidth: '36px',
+                      height: '36px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    title="जोड़ें"
+                  >
+                    +
+                  </button>
+                  <button
+                    onClick={() => setShowFamilySearchPopup(true)}
+                    style={{
+                      padding: '6px 10px',
+                      background: 'white',
+                      color: '#333',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                      minWidth: '36px',
+                      height: '36px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    title="खोजें"
+                  >
+                    🔍
+                  </button>
+                </div>
+              </div>
+
+              {/* Search Input */}
+              <div style={{ marginBottom: '12px' }}>
+                <input
+                  type="text"
+                  placeholder="🔍 सर्च परिवार..."
+                  value={familySearchTerm}
+                  onChange={(e) => setFamilySearchTerm(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '13px',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+
+              {filteredHeads.length === 0 ? (
+                <p style={{ color: '#64748b', textAlign: 'center', padding: '20px' }}>
+                  कोई परिवार नहीं मिला
+                </p>
+              ) : (
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: viewMode === 'card' ? 'repeat(auto-fill, minmax(280px, 1fr))' : '1fr',
+                    gap: '15px',
+                  }}
+                >
+                  {filteredHeads.map((head, index) => {
+                    const familyMembers = members.filter((m) => m.familyID === head.familyID);
+                    const nonHeadMembers = familyMembers.filter((m) => !m.isHead);
+                    const headKids = nonHeadMembers.filter((m) => parseInt(m.age_years || '0') < 10).length;
+                    const headAdults = nonHeadMembers.filter((m) => parseInt(m.age_years || '0') >= 10).length;
+
+                    return viewMode === 'card' ? (
+                      <div
+                        key={index}
+                        onClick={() => setSelectedHead(head)}
+                        style={{
+                          background: '#f8fafc',
+                          padding: '12px 15px',
+                          borderRadius: '10px',
+                          border: '1px solid #e2e8f0',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        <div style={{ fontSize: '14px', color: '#94a3b8', fontWeight: '600' }}>
+                          {head.memberNo || index + 1}
+                        </div>
+                        <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#7c3aed' }}>
+                          {formatHeadDisplay(head)}
+                        </div>
+                        <div style={{ color: '#475569', fontSize: '14px', marginTop: '2px' }}>
+                          {head.villageCity || '-'} {head.area ? `• ${head.area}` : ''}
+                        </div>
+                        <div style={{
+                          marginTop: '8px',
+                          borderTop: '1px solid #e2e8f0',
+                          paddingTop: '8px',
+                          display: 'flex',
+                          gap: '15px',
+                          fontSize: '13px',
+                          color: '#64748b',
+                          justifyContent: 'space-around',
+                        }}>
+                          <span><strong>कुल:</strong> {nonHeadMembers.length}</span>
+                          <span><strong>बच्चे:</strong> {headKids}</span>
+                          <span><strong>बड़े:</strong> {headAdults}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div key={index} style={{ padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}>
+                        <div><strong>ID:</strong> {head.familyID}</div>
+                        <div><strong>मुखिया:</strong> {formatHeadDisplay(head)}</div>
+                        <div><strong>गाँव/शहर:</strong> {head.villageCity || '-'}</div>
+                        <div><strong>सदस्य:</strong> {nonHeadMembers.length}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* सभी सदस्य */}
+        <div style={cardWrapperStyle}>
+          <button
+            onClick={() => setShowAllMembersList(!showAllMembersList)}
+            style={{
+              width: '100%',
+              padding: '14px 18px',
+              background: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              fontFamily: "'Poppins', 'Noto Sans', sans-serif",
+              transition: 'all 0.3s ease',
+            }}
+          >
+            👥 सभी सदस्य
+          </button>
+
+          {showAllMembersList && (
+            <div
+              style={{
+                marginTop: '15px',
+                background: 'white',
+                padding: '15px',
+                borderRadius: '12px',
+                border: '1px solid #67e8f9',
+                maxHeight: '500px',
+                overflowY: 'auto',
+              }}
+            >
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '10px',
+                marginBottom: '15px',
+                borderBottom: '2px solid #cffafe',
+                paddingBottom: '12px',
+              }}>
+                <h2 style={{ margin: 0, color: '#0891b2', fontSize: '18px' }}>
+                  👥 सभी सदस्य
+                </h2>
+                
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <button
+                    onClick={() => setShowOptionsDropdown(!showOptionsDropdown)}
+                    style={{
+                      padding: '6px 10px',
+                      background: 'white',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '16px',
+                      fontWeight: 'bold',
+                      color: '#333',
+                      minWidth: '36px',
+                      height: '36px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    title="विकल्प"
+                  >
+                    ⋯
+                  </button>
+                  <button
+                    onClick={() => setIsMemberFormOpen(true)}
+                    style={{
+                      padding: '6px 10px',
+                      background: 'white',
+                      color: '#333',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '18px',
+                      fontWeight: 'bold',
+                      minWidth: '36px',
+                      height: '36px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    title="जोड़ें"
+                  >
+                    +
+                  </button>
+                  <button
+                    onClick={() => setShowMemberSearchPopup(true)}
+                    style={{
+                      padding: '6px 10px',
+                      background: 'white',
+                      color: '#333',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                      minWidth: '36px',
+                      height: '36px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    title="खोजें"
+                  >
+                    🔍
+                  </button>
+                </div>
+              </div>
+
+              {/* Search Input */}
+              <div style={{ marginBottom: '12px' }}>
+                <input
+                  type="text"
+                  placeholder="🔍 सर्च सदस्य..."
+                  value={memberSearchTerm}
+                  onChange={(e) => setMemberSearchTerm(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '13px',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+
+              {Object.keys(nonHeadGrouped).length === 0 ? (
+                <p style={{ color: '#64748b', textAlign: 'center', padding: '20px' }}>
+                  कोई सदस्य नहीं मिला
+                </p>
+              ) : (
+                Object.keys(nonHeadGrouped).map((fid) => {
+                  const familyMembers = nonHeadGrouped[fid];
+                  return (
+                    <div
+                      key={fid}
+                      style={{
+                        marginBottom: '12px',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <div
+                        style={{
+                          background: '#0891b2',
+                          color: 'white',
+                          padding: '6px 12px',
+                          fontWeight: 'bold',
+                          fontSize: '13px',
+                        }}
+                      >
+                        🏠 Family ID: {fid} ({familyMembers.length} सदस्य)
+                      </div>
+                      <div style={{ padding: '8px 12px' }}>
+                        {familyMembers.map((m: any, idx: number) => (
+                          <div
+                            key={idx}
+                            onClick={() => setSelectedMember(m)}
+                            style={{
+                              padding: '6px 10px',
+                              borderBottom: idx !== familyMembers.length - 1 ? '1px solid #e2e8f0' : 'none',
+                              background: idx % 2 === 0 ? '#fafafa' : 'white',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '10px',
+                              fontSize: '14px',
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = '#e0f2fe'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = idx % 2 === 0 ? '#fafafa' : 'white'}
+                          >
+                            <span style={{ color: '#94a3b8', fontSize: '12px' }}>
+                              {m.memberNo || idx + 1}.
+                            </span>
+                            <span>{formatMemberDisplay(m)}</span>
+                            {m.villageCity && (
+                              <span style={{ fontSize: '12px', color: '#64748b' }}>
+                                📍 {m.villageCity}
+                              </span>
+                            )}
+                            {m.gotra && (
+                              <span style={{ fontSize: '12px', color: '#64748b' }}>
+                                🧬 {m.gotra}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <hr style={{ margin: '35px 0', borderColor: '#e2e8f0' }} />
+
+      {/* =========================================================
+          SECTION 24: POPUPS & MODALS
+      ========================================================= */}
+      {selectedMember && <MemberDetailCard member={selectedMember} onClose={() => setSelectedMember(null)} />}
+      {selectedHead && <HeadDetailCard head={selectedHead} onClose={() => setSelectedHead(null)} />}
+      
+      <HeadEditModal />
+      <MemberEditModal />
+
+      {/* Committee Edit Modal */}
+      {isCommitteeEditModalOpen && committeeEditFormData && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2000,
+            padding: '20px',
+          }}
+          onClick={() => setIsCommitteeEditModalOpen(false)}
+        >
           <div
             style={{
               background: 'white',
-              padding: '20px',
-              borderRadius: '12px',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-              marginBottom: '30px',
-              border: '1px solid #cbd5e1',
+              borderRadius: '16px',
+              padding: '25px',
+              maxWidth: '500px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+              position: 'relative',
             }}
+            onClick={(e) => e.stopPropagation()}
           >
-            <h3
+            <button
+              onClick={() => setIsCommitteeEditModalOpen(false)}
               style={{
-                marginTop: 0,
-                color: '#1e3a8a',
-                borderBottom: '2px solid #e2e8f0',
-                paddingBottom: '10px',
+                position: 'absolute',
+                top: '10px',
+                right: '15px',
+                background: 'none',
+                border: 'none',
+                fontSize: '24px',
+                cursor: 'pointer',
+                color: '#64748b',
               }}
             >
-              ⚙️ सेटिंग्स
-            </h3>
-            <div style={{ marginBottom: '20px' }}>
-              <h4 style={{ color: '#334155', marginBottom: '10px' }}>📥 Public Downloads</h4>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-                <button
-                  onClick={() => generatePDF('families')}
+              ✕
+            </button>
+
+            <h2 style={{ margin: '0 0 20px 0', color: '#d97706', borderBottom: '2px solid #fde68a', paddingBottom: '10px' }}>
+              ✏️ पदाधिकारी एडिट करें
+            </h2>
+
+            <form onSubmit={handleCommitteeEditSubmit}>
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', color: '#334155' }}>
+                  पद <span style={{ color: 'red' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="जैसे: अध्यक्ष, उपाध्यक्ष, सचिव..."
+                  value={committeeEditFormData.designation || ''}
+                  onChange={(e) => setCommitteeEditFormData({...committeeEditFormData, designation: e.target.value})}
+                  required
                   style={{
-                    padding: '8px 16px',
-                    background: '#8b5cf6',
+                    width: '100%',
+                    padding: '8px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    boxSizing: 'border-box',
+                    fontSize: '13px',
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', color: '#334155' }}>
+                  नाम <span style={{ color: 'red' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="पूरा नाम"
+                  value={committeeEditFormData.name || ''}
+                  onChange={(e) => setCommitteeEditFormData({...committeeEditFormData, name: e.target.value})}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '8px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    boxSizing: 'border-box',
+                    fontSize: '13px',
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', color: '#334155' }}>
+                  गोत्र
+                </label>
+                <input
+                  type="text"
+                  placeholder="गोत्र"
+                  value={committeeEditFormData.gotra || ''}
+                  onChange={(e) => setCommitteeEditFormData({...committeeEditFormData, gotra: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '8px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    boxSizing: 'border-box',
+                    fontSize: '13px',
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', color: '#334155' }}>
+                  📱 मोबाइल
+                </label>
+                <input
+                  type="tel"
+                  placeholder="10 अंक"
+                  value={committeeEditFormData.mobile || ''}
+                  onChange={(e) => setCommitteeEditFormData({...committeeEditFormData, mobile: e.target.value})}
+                  maxLength={10}
+                  style={{
+                    width: '100%',
+                    padding: '8px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    boxSizing: 'border-box',
+                    fontSize: '13px',
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', color: '#334155' }}>
+                  कार्यकाल
+                </label>
+                <input
+                  type="text"
+                  placeholder="जैसे: 2024-2026"
+                  value={committeeEditFormData.tenure || ''}
+                  onChange={(e) => setCommitteeEditFormData({...committeeEditFormData, tenure: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '8px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    boxSizing: 'border-box',
+                    fontSize: '13px',
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'center', borderTop: '1px solid #e2e8f0', paddingTop: '15px' }}>
+                <button
+                  type="submit"
+                  style={{
+                    padding: '6px 20px',
+                    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
                     color: 'white',
                     border: 'none',
                     borderRadius: '6px',
                     cursor: 'pointer',
+                    fontWeight: 'bold',
+                    fontSize: '13px',
                   }}
                 >
-                  🏠 परिवार लिस्ट
-                </button>
-                <button
-                  onClick={() => generatePDF('committee')}
-                  style={{
-                    padding: '8px 16px',
-                    background: '#f59e0b',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  🏢 कमेटी लिस्ट
+                  ✅ सबमिट
                 </button>
               </div>
-            </div>
-            <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  marginBottom: '10px',
-                }}
-              >
-                <h4 style={{ color: '#334155', margin: 0 }}>🔐 Admin Area</h4>
-                {isAdmin ? (
-                  <button
-                    onClick={handleAdminLogout}
-                    style={{
-                      padding: '4px 12px',
-                      background: '#ef4444',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Logout
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleAdminLogin}
-                    style={{
-                      padding: '4px 12px',
-                      background: '#3b82f6',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Admin Login
-                  </button>
-                )}
-              </div>
-              {isAdmin ? (
-                <div>
-                  <p style={{ color: '#16a34a', fontWeight: 'bold' }}>✅ Admin मोड सक्रिय है</p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '12px' }}>
-                    <button
-                      onClick={() => generatePDF('all_members')}
-                      style={{
-                        padding: '8px 16px',
-                        background: '#667eea',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      📋 सभी सदस्य
-                    </button>
-                    <button
-                      onClick={() => generatePDF('students')}
-                      style={{
-                        padding: '8px 16px',
-                        background: '#06b6d4',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      🎓 छात्र/छात्राएं
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <p style={{ color: '#64748b', fontStyle: 'italic' }}>
-                  Admin लॉगिन करें ताकि आप सभी सदस्य, छात्र लिस्ट डाउनलोड कर सकें और Excel/CSV बल्क
-                  इम्पोर्ट का उपयोग कर सकें।
-                </p>
-              )}
-            </div>
+            </form>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* BIRTHDAY NOTIFICATION */}
-        {birthdayFolks.length > 0 && (
-          <div
-            style={{
-              background: '#fff3cd',
-              border: '1px solid #ffeeba',
-              color: '#856404',
-              padding: '15px',
-              borderRadius: '8px',
-              marginBottom: '20px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-            }}
-          >
-            <span style={{ fontSize: '24px' }}>🎉</span>
-            <div>
-              <strong>आज समाज में उत्सव का दिन है!</strong> निम्नलिखित सदस्यों को जन्मदिन की हार्दिक
-              बधाई:
-              <span style={{ marginLeft: '10px', fontWeight: 'bold', color: '#d9534f' }}>
-                {birthdayFolks.map((f) => `${f.name} (Family ID: ${f.familyID})`).join(', ')}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* DASHBOARD CARDS */}
+      {/* Family Form Modal */}
+      {isFamilyFormOpen && (
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '12px',
-            marginBottom: '20px',
-            maxWidth: '550px',
-            marginLeft: 'auto',
-            marginRight: 'auto',
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 3000,
+            padding: '20px',
           }}
+          onClick={() => setIsFamilyFormOpen(false)}
         >
           <div
             style={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              borderRadius: '14px',
-              padding: '12px 8px',
-              textAlign: 'center',
-              color: 'white',
-              boxShadow: '0 4px 15px rgba(102, 126, 234, 0.35)',
+              maxWidth: '500px',
+              width: '100%',
+              position: 'relative',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              background: 'transparent',
+              padding: '0 4px',
             }}
+            onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ fontSize: '28px' }}>🏠</div>
-            <div style={{ fontSize: '16px', fontWeight: '600', opacity: 0.9 }}>परिवार</div>
-            <div style={{ fontSize: '28px', fontWeight: '800' }}>{totalFamilies}</div>
-          </div>
-          <div
-            style={{
-              background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
-              borderRadius: '14px',
-              padding: '12px 8px',
-              textAlign: 'center',
-              color: 'white',
-              boxShadow: '0 4px 15px rgba(17, 153, 142, 0.35)',
-            }}
-          >
-            <div style={{ fontSize: '28px' }}>👥</div>
-            <div style={{ fontSize: '16px', fontWeight: '600', opacity: 0.9 }}>कुल सदस्य</div>
-            <div style={{ fontSize: '28px', fontWeight: '800' }}>{totalMembers}</div>
-          </div>
-          <div
-            style={{
-              background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-              borderRadius: '14px',
-              padding: '12px 8px',
-              textAlign: 'center',
-              color: 'white',
-              boxShadow: '0 4px 15px rgba(245, 87, 108, 0.35)',
-            }}
-          >
-            <div style={{ fontSize: '28px' }}>👶</div>
-            <div style={{ fontSize: '16px', fontWeight: '600', opacity: 0.9 }}>बच्चे (&lt;10)</div>
-            <div style={{ fontSize: '28px', fontWeight: '800' }}>{totalKids}</div>
-          </div>
-          <div
-            style={{
-              background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-              borderRadius: '14px',
-              padding: '12px 8px',
-              textAlign: 'center',
-              color: 'white',
-              boxShadow: '0 4px 15px rgba(79, 172, 254, 0.35)',
-            }}
-          >
-            <div style={{ fontSize: '28px' }}>👨</div>
-            <div style={{ fontSize: '16px', fontWeight: '600', opacity: 0.9 }}>बड़े सदस्य</div>
-            <div style={{ fontSize: '28px', fontWeight: '800' }}>{totalAdults}</div>
-          </div>
-          <div
-            style={{
-              background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-              borderRadius: '14px',
-              padding: '12px 8px',
-              textAlign: 'center',
-              color: 'white',
-              boxShadow: '0 4px 15px rgba(250, 112, 154, 0.35)',
-            }}
-          >
-            <div style={{ fontSize: '28px' }}>🎓</div>
-            <div style={{ fontSize: '16px', fontWeight: '600', opacity: 0.9 }}>छात्र</div>
-            <div style={{ fontSize: '28px', fontWeight: '800' }}>{totalStudents}</div>
+            <AddFamilyHead onClose={() => setIsFamilyFormOpen(false)} />
           </div>
         </div>
+      )}
 
-        {/* VIEW TOGGLE */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
-          <button
-            onClick={() => setViewMode(viewMode === 'card' ? 'list' : 'card')}
-            style={{
-              padding: '4px 12px',
-              background: '#667eea',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontWeight: 'bold',
-              fontSize: '12px',
-              boxShadow: '0 2px 6px rgba(102, 126, 234, 0.3)',
-            }}
-          >
-            {viewMode === 'card' ? '📋 लिस्ट व्यू' : '🃏 कार्ड व्यू'}
-          </button>
-        </div>
-
-        <hr style={{ margin: '35px 0', borderColor: '#e2e8f0' }} />
-
-        {/* =========================================================
-            SECTION 19: UTILITY BUTTONS - CLEAN BUTTONS
-        ========================================================= */}
+      {/* Member Form Modal */}
+      {isMemberFormOpen && (
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: '20px',
-            marginBottom: '30px',
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 3000,
+            padding: '20px',
           }}
+          onClick={() => setIsMemberFormOpen(false)}
         >
-          {/* समाज कमेटी */}
-          <div style={cardWrapperStyle}>
-            <button
-              onClick={() => setShowCommitteeList(!showCommitteeList)}
-              style={{
-                width: '100%',
-                padding: '14px 18px',
-                background: '#f59e0b',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '16px',
-                fontWeight: 'bold',
-                fontFamily: "'Poppins', 'Noto Sans', sans-serif",
-                transition: 'all 0.3s ease',
-              }}
-            >
-              🏢 समाज कमेटी
-            </button>
-
-            {showCommitteeList && (
-              <div
-                style={{
-                  marginTop: '15px',
-                  border: '1px solid #fcd34d',
-                  borderRadius: '12px',
-                  padding: '15px',
-                  background: '#fffbeb',
-                  overflowX: 'auto',
-                }}
-              >
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: '10px',
-                  marginBottom: '15px',
-                  borderBottom: '2px solid #fde68a',
-                  paddingBottom: '12px',
-                }}>
-                  <h2 style={{ margin: 0, color: '#d97706', fontSize: '18px' }}>
-                    🏢 समाज कमेटी
-                  </h2>
-                  
-                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-                    <button
-                      onClick={() => setShowCommitteeOptionsDropdown(!showCommitteeOptionsDropdown)}
-                      style={{
-                        padding: '6px 10px',
-                        background: 'white',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        color: '#333',
-                        minWidth: '36px',
-                        height: '36px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                      title="विकल्प"
-                    >
-                      ⋯
-                    </button>
-                    <button
-                      onClick={() => setIsCommitteeFormOpen(true)}
-                      style={{
-                        padding: '6px 10px',
-                        background: 'white',
-                        color: '#333',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '18px',
-                        fontWeight: 'bold',
-                        minWidth: '36px',
-                        height: '36px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                      title="जोड़ें"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-
-                {showCommitteeOptionsDropdown && (
-                  <div style={{
-                    background: 'white',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
-                    boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
-                    padding: '8px 0',
-                    marginBottom: '12px',
-                  }}>
-                    <div style={{ padding: '4px 16px', fontWeight: 'bold', color: '#475569', fontSize: '12px' }}>
-                      Show As
-                    </div>
-                    <div
-                      onClick={() => { setCommitteeViewMode('list'); setShowCommitteeOptionsDropdown(false); }}
-                      style={{ padding: '4px 16px', cursor: 'pointer', fontSize: '13px' }}
-                    >
-                      <span style={{ color: committeeViewMode === 'list' ? '#f59e0b' : '#334155' }}>•</span> List
-                    </div>
-                    <div
-                      onClick={() => { setCommitteeViewMode('card'); setShowCommitteeOptionsDropdown(false); }}
-                      style={{ padding: '4px 16px', cursor: 'pointer', fontSize: '13px' }}
-                    >
-                      <span style={{ color: committeeViewMode === 'card' ? '#f59e0b' : '#334155' }}>•</span> Card
-                    </div>
-
-                    <div style={{ borderTop: '1px solid #e2e8f0', margin: '4px 16px' }}></div>
-
-                    <div style={{ padding: '4px 16px', fontWeight: 'bold', color: '#475569', fontSize: '12px' }}>
-                      Print
-                    </div>
-                    <div
-                      onClick={() => { generatePDF('committee'); setShowCommitteeOptionsDropdown(false); }}
-                      style={{ padding: '4px 16px', cursor: 'pointer', fontSize: '13px' }}
-                    >
-                      🖨️ Print as list
-                    </div>
-
-                    <div style={{ borderTop: '1px solid #e2e8f0', margin: '4px 16px' }}></div>
-
-                    <div style={{ padding: '4px 16px', fontWeight: 'bold', color: '#475569', fontSize: '12px' }}>
-                      Export
-                    </div>
-                    <div
-                      onClick={() => setShowCommitteeExportDropdown(!showCommitteeExportDropdown)}
-                      style={{ padding: '4px 16px', cursor: 'pointer', fontSize: '13px' }}
-                    >
-                      {showCommitteeExportDropdown ? '▼' : '▶'} Export formats
-                    </div>
-
-                    {showCommitteeExportDropdown && (
-                      <div style={{ paddingLeft: '16px' }}>
-                        {['XLSX', 'PDF', 'HTML', 'XML', 'JSON', 'CSV', 'TSV'].map((format) => (
-                          <div
-                            key={format}
-                            onClick={() => {
-                              exportCommitteeData(format.toLowerCase());
-                              setShowCommitteeOptionsDropdown(false);
-                              setShowCommitteeExportDropdown(false);
-                            }}
-                            style={{ padding: '4px 20px', cursor: 'pointer', fontSize: '12px' }}
-                          >
-                            {format}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {committee.length === 0 ? (
-                  <p style={{ color: '#92400e', background: '#fef3c7', padding: '15px', borderRadius: '8px', textAlign: 'center' }}>
-                    कोई पदाधिकारी नहीं।
-                  </p>
-                ) : (
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: committeeViewMode === 'card' ? 'repeat(auto-fill, minmax(280px, 1fr))' : '1fr',
-                    gap: '12px',
-                  }}>
-                    {committee.map((c) => (
-                      <div
-                        key={c.id}
-                        style={{
-                          padding: '12px 15px',
-                          background: committeeViewMode === 'card' ? '#f8fafc' : 'transparent',
-                          borderRadius: committeeViewMode === 'card' ? '10px' : '0',
-                          border: committeeViewMode === 'card' ? '1px solid #e2e8f0' : '1px solid #e2e8f0',
-                          borderBottom: committeeViewMode === 'card' ? '1px solid #e2e8f0' : 'none',
-                          display: committeeViewMode === 'card' ? 'block' : 'grid',
-                          gridTemplateColumns: committeeViewMode === 'card' ? '1fr' : 'repeat(auto-fit, minmax(120px, 1fr))',
-                          gap: '8px',
-                        }}
-                      >
-                        {committeeViewMode === 'card' ? (
-                          <>
-                            <div style={{ fontSize: '14px', color: '#ea580c', fontWeight: 'bold' }}>
-                              ⭐ {c.designation}
-                            </div>
-                            <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#1e293b' }}>
-                              {c.name}
-                            </div>
-                            {c.gotra && <div style={{ color: '#475569', fontSize: '14px' }}>गोत्र: {c.gotra}</div>}
-                            {c.mobile && (
-                              <div
-                                style={{ color: '#2563eb', cursor: 'pointer', textDecoration: 'underline', fontSize: '13px' }}
-                                onClick={() => dialPhone(c.mobile)}
-                              >
-                                📞 {c.mobile}
-                              </div>
-                            )}
-                            {c.tenure && <div style={{ color: '#64748b', fontSize: '12px' }}>कार्यकाल: {c.tenure}</div>}
-                            <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
-                              <button
-                                onClick={() => openCommitteeEditModal(c)}
-                                style={{ padding: '4px 10px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '4px', cursor: 'pointer', color: '#16a34a', fontSize: '12px' }}
-                              >
-                                ✏️ एडिट
-                              </button>
-                              <button
-                                onClick={() => handleDeleteCommittee(c.id, c.name)}
-                                style={{ padding: '4px 10px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '4px', cursor: 'pointer', color: '#dc2626', fontSize: '12px' }}
-                              >
-                                🗑️ हटाएं
-                              </button>
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <span><strong>पद:</strong> {c.designation}</span>
-                            <span><strong>नाम:</strong> {c.name}</span>
-                            <span><strong>गोत्र:</strong> {c.gotra || '-'}</span>
-                            <span><strong>मोबाइल:</strong> {c.mobile || '-'}</span>
-                            <span><strong>कार्यकाल:</strong> {c.tenure || '-'}</span>
-                            <span>
-                              <button onClick={() => openCommitteeEditModal(c)} style={{ padding: '2px 8px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '4px', cursor: 'pointer', color: '#16a34a', fontSize: '11px' }}>✏️</button>
-                              <button onClick={() => handleDeleteCommittee(c.id, c.name)} style={{ padding: '2px 8px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '4px', cursor: 'pointer', color: '#dc2626', fontSize: '11px', marginLeft: '4px' }}>🗑️</button>
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* सभी परिवार */}
-          <div style={cardWrapperStyle}>
-            <button
-              onClick={() => setShowFamilyList(!showFamilyList)}
-              style={{
-                width: '100%',
-                padding: '14px 18px',
-                background: '#8b5cf6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '16px',
-                fontWeight: 'bold',
-                fontFamily: "'Poppins', 'Noto Sans', sans-serif",
-                transition: 'all 0.3s ease',
-              }}
-            >
-              🏠 सभी परिवार
-            </button>
-
-            {showFamilyList && (
-              <div
-                style={{
-                  marginTop: '15px',
-                  background: 'white',
-                  padding: '15px',
-                  borderRadius: '12px',
-                  border: '1px solid #c084fc',
-                  maxHeight: '500px',
-                  overflowY: 'auto',
-                }}
-              >
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: '10px',
-                  marginBottom: '15px',
-                  borderBottom: '2px solid #ede9fe',
-                  paddingBottom: '12px',
-                }}>
-                  <h2 style={{ margin: 0, color: '#7c3aed', fontSize: '18px' }}>
-                    🏠 सभी परिवार
-                  </h2>
-                  
-                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-                    <button
-                      onClick={() => setShowOptionsDropdown(!showOptionsDropdown)}
-                      style={{
-                        padding: '6px 10px',
-                        background: 'white',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        color: '#333',
-                        minWidth: '36px',
-                        height: '36px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                      title="विकल्प"
-                    >
-                      ⋯
-                    </button>
-                    <button
-                      onClick={() => setIsFamilyFormOpen(true)}
-                      style={{
-                        padding: '6px 10px',
-                        background: 'white',
-                        color: '#333',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '18px',
-                        fontWeight: 'bold',
-                        minWidth: '36px',
-                        height: '36px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                      title="जोड़ें"
-                    >
-                      +
-                    </button>
-                    <button
-                      onClick={() => setShowFamilySearchPopup(true)}
-                      style={{
-                        padding: '6px 10px',
-                        background: 'white',
-                        color: '#333',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        fontWeight: 'bold',
-                        minWidth: '36px',
-                        height: '36px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                      title="खोजें"
-                    >
-                      🔍
-                    </button>
-                  </div>
-                </div>
-
-                {showOptionsDropdown && (
-                  <div style={{
-                    background: 'white',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
-                    boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
-                    padding: '8px 0',
-                    marginBottom: '12px',
-                  }}>
-                    <div style={{ padding: '4px 16px', fontWeight: 'bold', color: '#475569', fontSize: '12px' }}>
-                      Show As
-                    </div>
-                    <div
-                      onClick={() => { setListViewMode('list'); setShowOptionsDropdown(false); }}
-                      style={{ padding: '4px 16px', cursor: 'pointer', fontSize: '13px' }}
-                    >
-                      <span style={{ color: listViewMode === 'list' ? '#8b5cf6' : '#334155' }}>•</span> List
-                    </div>
-                    <div
-                      onClick={() => { setListViewMode('spreadsheet'); setShowOptionsDropdown(false); }}
-                      style={{ padding: '4px 16px', cursor: 'pointer', fontSize: '13px' }}
-                    >
-                      <span style={{ color: listViewMode === 'spreadsheet' ? '#8b5cf6' : '#334155' }}>•</span> Spreadsheet
-                    </div>
-                    <div
-                      onClick={() => { setListViewMode('kanban'); setShowOptionsDropdown(false); }}
-                      style={{ padding: '4px 16px', cursor: 'pointer', fontSize: '13px' }}
-                    >
-                      <span style={{ color: listViewMode === 'kanban' ? '#8b5cf6' : '#334155' }}>•</span> Kanban
-                    </div>
-
-                    <div style={{ borderTop: '1px solid #e2e8f0', margin: '4px 16px' }}></div>
-
-                    <div style={{ padding: '4px 16px', fontWeight: 'bold', color: '#475569', fontSize: '12px' }}>
-                      Print
-                    </div>
-                    <div
-                      onClick={() => { generatePDF('families'); setShowOptionsDropdown(false); }}
-                      style={{ padding: '4px 16px', cursor: 'pointer', fontSize: '13px' }}
-                    >
-                      🖨️ Print as list
-                    </div>
-                    <div
-                      onClick={() => { generatePDF('all_members'); setShowOptionsDropdown(false); }}
-                      style={{ padding: '4px 16px', cursor: 'pointer', fontSize: '13px' }}
-                    >
-                      🖨️ Print as Summary
-                    </div>
-
-                    <div style={{ borderTop: '1px solid #e2e8f0', margin: '4px 16px' }}></div>
-
-                    <div style={{ padding: '4px 16px', fontWeight: 'bold', color: '#475569', fontSize: '12px' }}>
-                      Import
-                    </div>
-                    <div style={{ padding: '4px 16px', cursor: 'pointer', fontSize: '13px', position: 'relative' }}>
-                      <label style={{ cursor: 'pointer', width: '100%', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span>📁 Upload Family List</span>
-                        <input
-                          type="file"
-                          accept=".xlsx,.xls,.csv"
-                          onChange={(e) => handleFamilyImport(e)}
-                          style={{ position: 'absolute', opacity: 0, cursor: 'pointer', width: '100%', height: '100%', left: 0, top: 0 }}
-                        />
-                      </label>
-                    </div>
-
-                    <div style={{ borderTop: '1px solid #e2e8f0', margin: '4px 16px' }}></div>
-
-                    <div style={{ padding: '4px 16px', fontWeight: 'bold', color: '#475569', fontSize: '12px' }}>
-                      Export
-                    </div>
-                    <div
-                      onClick={() => setShowExportDropdown(!showExportDropdown)}
-                      style={{ padding: '4px 16px', cursor: 'pointer', fontSize: '13px' }}
-                    >
-                      {showExportDropdown ? '▼' : '▶'} Export formats
-                    </div>
-
-                    {showExportDropdown && (
-                      <div style={{ paddingLeft: '16px' }}>
-                        {['XLSX', 'PDF', 'HTML', 'XML', 'JSON', 'CSV', 'TSV'].map((format) => (
-                          <div
-                            key={format}
-                            onClick={() => { exportData(format.toLowerCase()); setShowOptionsDropdown(false); setShowExportDropdown(false); }}
-                            style={{ padding: '4px 20px', cursor: 'pointer', fontSize: '12px' }}
-                          >
-                            {format}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Family Search Results */}
-                {familySearched ? (
-                  familySearchResults.length > 0 ? (
-                    <>
-                      <div style={{
-                        fontSize: '14px',
-                        color: '#475569',
-                        marginBottom: '12px',
-                        padding: '8px 12px',
-                        background: '#f3e8ff',
-                        borderRadius: '6px',
-                      }}>
-                        मिले: {familySearchResults.length} सदस्य
-                      </div>
-                      <div
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns:
-                            viewMode === 'card' ? 'repeat(auto-fill, minmax(280px, 1fr))' : '1fr',
-                          gap: '15px',
-                        }}
-                      >
-                        {familySearchResults
-                          .filter((m) => m.isHead === true)
-                          .map((head, index) => {
-                            const familyMembers = members.filter((m) => m.familyID === head.familyID);
-                            const nonHeadMembers = familyMembers.filter((m) => !m.isHead);
-                            const headKids = nonHeadMembers.filter(
-                              (m) => parseInt(m.age_years || '0') < 10
-                            ).length;
-                            const headAdults = nonHeadMembers.filter(
-                              (m) => parseInt(m.age_years || '0') >= 10
-                            ).length;
-                            const cardId = `head-${head.id}`;
-
-                            return viewMode === 'card' ? (
-                              <div
-                                key={index}
-                                className="card-container"
-                                style={{
-                                  background: '#f8fafc',
-                                  padding: '12px 15px',
-                                  borderRadius: '10px',
-                                  border: '1px solid #e2e8f0',
-                                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-                                  cursor: 'pointer',
-                                  transition: 'all 0.2s',
-                                  position: 'relative',
-                                }}
-                                onMouseEnter={() => setHoveredCard(cardId)}
-                                onMouseLeave={() => setHoveredCard(null)}
-                              >
-                                <div
-                                  className="card-hover-actions"
-                                  style={{ position: 'absolute', top: '2px', right: '6px' }}
-                                >
-                                  <span
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      openHeadEditModal(head);
-                                    }}
-                                    style={{
-                                      cursor: 'pointer',
-                                      fontSize: '18px',
-                                      color: '#4a4a4a',
-                                      fontWeight: 'bold',
-                                      letterSpacing: '2px',
-                                      padding: '2px 4px',
-                                      userSelect: 'none',
-                                    }}
-                                    title="एडिट करें"
-                                  >
-                                    ⋯
-                                  </span>
-                                </div>
-
-                                <div onClick={() => setSelectedHead(head)}>
-                                  <div style={{ fontSize: '14px', color: '#94a3b8', fontWeight: '600' }}>
-                                    {head.memberNo || index + 1}
-                                  </div>
-                                  <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#7c3aed' }}>
-                                    {formatHeadDisplay(head)}
-                                  </div>
-
-                                  <div style={{ color: '#475569', fontSize: '14px', marginTop: '2px' }}>
-                                    {head.villageCity || '-'} {head.area ? `• ${head.area}` : ''}
-                                  </div>
-
-                                  <div
-                                    style={{
-                                      display: 'flex',
-                                      gap: '12px',
-                                      color: '#475569',
-                                      fontSize: '13px',
-                                      marginTop: '2px',
-                                      flexWrap: 'wrap',
-                                    }}
-                                  >
-                                    {head.mobile1 && (
-                                      <span
-                                        style={{
-                                          color: '#2563eb',
-                                          cursor: 'pointer',
-                                          textDecoration: 'underline',
-                                        }}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          dialPhone(head.mobile1);
-                                        }}
-                                      >
-                                        📞 {head.mobile1}
-                                      </span>
-                                    )}
-                                    {head.mobile2 && (
-                                      <span
-                                        style={{
-                                          color: '#2563eb',
-                                          cursor: 'pointer',
-                                          textDecoration: 'underline',
-                                        }}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          dialPhone(head.mobile2);
-                                        }}
-                                      >
-                                        📞 {head.mobile2}
-                                      </span>
-                                    )}
-                                    {!head.mobile1 && !head.mobile2 && (
-                                      <span style={{ color: '#94a3b8' }}>कोई मोबाइल नहीं</span>
-                                    )}
-                                  </div>
-
-                                  <div
-                                    style={{
-                                      marginTop: '8px',
-                                      borderTop: '1px solid #e2e8f0',
-                                      paddingTop: '8px',
-                                      display: 'flex',
-                                      gap: '15px',
-                                      fontSize: '13px',
-                                      color: '#64748b',
-                                      justifyContent: 'space-around',
-                                    }}
-                                  >
-                                    <span>
-                                      <strong>कुल:</strong> {nonHeadMembers.length}
-                                    </span>
-                                    <span>
-                                      <strong>बच्चे:</strong> {headKids}
-                                    </span>
-                                    <span>
-                                      <strong>बड़े:</strong> {headAdults}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                            ) : (
-                              <div
-                                key={index}
-                                style={{ padding: '10px 12px', borderBottom: '1px solid #e2e8f0' }}
-                              >
-                                <div>
-                                  <strong>ID:</strong> {head.familyID}
-                                </div>
-                                <div>
-                                  <strong>क्र.सं.:</strong> {head.memberNo || index + 1}
-                                </div>
-                                <div>
-                                  <strong>मुखिया:</strong> {formatHeadDisplay(head)}
-                                </div>
-                                <div>
-                                  <strong>गाँव/शहर:</strong> {head.villageCity || '-'}
-                                </div>
-                                <div>
-                                  <strong>एरिया:</strong> {head.area || '-'}
-                                </div>
-                                <div>
-                                  <strong>मोबाइल 1:</strong> {head.mobile1 || '-'}
-                                </div>
-                                <div>
-                                  <strong>मोबाइल 2:</strong> {head.mobile2 || '-'}
-                                </div>
-                                <div>
-                                  <strong>सदस्य:</strong> {nonHeadMembers.length}
-                                </div>
-                                <div>
-                                  <strong>बच्चे:</strong> {headKids}
-                                </div>
-                                <div>
-                                  <strong>बड़े:</strong> {headAdults}
-                                </div>
-                              </div>
-                            );
-                          })}
-                      </div>
-                    </>
-                  ) : (
-                    <div style={{
-                      padding: '20px',
-                      textAlign: 'center',
-                      color: '#64748b',
-                    }}>
-                      कोई सदस्य नहीं मिला
-                    </div>
-                  )
-                ) : (
-                  <div style={{
-                    padding: '20px',
-                    textAlign: 'center',
-                    color: '#94a3b8',
-                    fontSize: '14px',
-                  }}>
-                    सर्च करने के लिए 🔍 बटन पर क्लिक करें
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* सभी सदस्य */}
-          <div style={cardWrapperStyle}>
-            <button
-              onClick={() => setShowAllMembersList(!showAllMembersList)}
-              style={{
-                width: '100%',
-                padding: '14px 18px',
-                background: '#3b82f6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '16px',
-                fontWeight: 'bold',
-                fontFamily: "'Poppins', 'Noto Sans', sans-serif",
-                transition: 'all 0.3s ease',
-              }}
-            >
-              👥 सभी सदस्य
-            </button>
-
-            {showAllMembersList && (
-              <div
-                style={{
-                  marginTop: '15px',
-                  background: 'white',
-                  padding: '15px',
-                  borderRadius: '12px',
-                  border: '1px solid #67e8f9',
-                  maxHeight: '500px',
-                  overflowY: 'auto',
-                }}
-              >
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: '10px',
-                  marginBottom: '15px',
-                  borderBottom: '2px solid #cffafe',
-                  paddingBottom: '12px',
-                }}>
-                  <h2 style={{ margin: 0, color: '#0891b2', fontSize: '18px' }}>
-                    👥 सभी सदस्य
-                  </h2>
-                  
-                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-                    <button
-                      onClick={() => setShowOptionsDropdown(!showOptionsDropdown)}
-                      style={{
-                        padding: '6px 10px',
-                        background: 'white',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        color: '#333',
-                        minWidth: '36px',
-                        height: '36px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                      title="विकल्प"
-                    >
-                      ⋯
-                    </button>
-                    <button
-                      onClick={() => setIsMemberFormOpen(true)}
-                      style={{
-                        padding: '6px 10px',
-                        background: 'white',
-                        color: '#333',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '18px',
-                        fontWeight: 'bold',
-                        minWidth: '36px',
-                        height: '36px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                      title="जोड़ें"
-                    >
-                      +
-                    </button>
-                    <button
-                      onClick={() => setShowMemberSearchPopup(true)}
-                      style={{
-                        padding: '6px 10px',
-                        background: 'white',
-                        color: '#333',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        fontWeight: 'bold',
-                        minWidth: '36px',
-                        height: '36px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                      title="खोजें"
-                    >
-                      🔍
-                    </button>
-                  </div>
-                </div>
-
-                {showOptionsDropdown && (
-                  <div style={{
-                    background: 'white',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
-                    boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
-                    padding: '8px 0',
-                    marginBottom: '12px',
-                  }}>
-                    <div style={{ padding: '4px 16px', fontWeight: 'bold', color: '#475569', fontSize: '12px' }}>
-                      Show As
-                    </div>
-                    <div
-                      onClick={() => { setListViewMode('list'); setShowOptionsDropdown(false); }}
-                      style={{ padding: '4px 16px', cursor: 'pointer', fontSize: '13px' }}
-                    >
-                      <span style={{ color: listViewMode === 'list' ? '#8b5cf6' : '#334155' }}>•</span> List
-                    </div>
-                    <div
-                      onClick={() => { setListViewMode('spreadsheet'); setShowOptionsDropdown(false); }}
-                      style={{ padding: '4px 16px', cursor: 'pointer', fontSize: '13px' }}
-                    >
-                      <span style={{ color: listViewMode === 'spreadsheet' ? '#8b5cf6' : '#334155' }}>•</span> Spreadsheet
-                    </div>
-                    <div
-                      onClick={() => { setListViewMode('kanban'); setShowOptionsDropdown(false); }}
-                      style={{ padding: '4px 16px', cursor: 'pointer', fontSize: '13px' }}
-                    >
-                      <span style={{ color: listViewMode === 'kanban' ? '#8b5cf6' : '#334155' }}>•</span> Kanban
-                    </div>
-
-                    <div style={{ borderTop: '1px solid #e2e8f0', margin: '4px 16px' }}></div>
-
-                    <div style={{ padding: '4px 16px', fontWeight: 'bold', color: '#475569', fontSize: '12px' }}>
-                      Print
-                    </div>
-                    <div
-                      onClick={() => { generatePDF('all_members'); setShowOptionsDropdown(false); }}
-                      style={{ padding: '4px 16px', cursor: 'pointer', fontSize: '13px' }}
-                    >
-                      🖨️ Print as list
-                    </div>
-                    <div
-                      onClick={() => { generatePDF('students'); setShowOptionsDropdown(false); }}
-                      style={{ padding: '4px 16px', cursor: 'pointer', fontSize: '13px' }}
-                    >
-                      🖨️ Print as Summary
-                    </div>
-
-                    <div style={{ borderTop: '1px solid #e2e8f0', margin: '4px 16px' }}></div>
-
-                    <div style={{ padding: '4px 16px', fontWeight: 'bold', color: '#475569', fontSize: '12px' }}>
-                      Import
-                    </div>
-                    <div style={{ padding: '4px 16px', cursor: 'pointer', fontSize: '13px', position: 'relative' }}>
-                      <label style={{ cursor: 'pointer', width: '100%', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span>📁 Upload Members List</span>
-                        <input
-                          type="file"
-                          accept=".xlsx,.xls,.csv"
-                          onChange={(e) => handleMemberImport(e)}
-                          style={{ position: 'absolute', opacity: 0, cursor: 'pointer', width: '100%', height: '100%', left: 0, top: 0 }}
-                        />
-                      </label>
-                    </div>
-
-                    <div style={{ borderTop: '1px solid #e2e8f0', margin: '4px 16px' }}></div>
-
-                    <div style={{ padding: '4px 16px', fontWeight: 'bold', color: '#475569', fontSize: '12px' }}>
-                      Export
-                    </div>
-                    <div
-                      onClick={() => setShowExportDropdown(!showExportDropdown)}
-                      style={{ padding: '4px 16px', cursor: 'pointer', fontSize: '13px' }}
-                    >
-                      {showExportDropdown ? '▼' : '▶'} Export formats
-                    </div>
-
-                    {showExportDropdown && (
-                      <div style={{ paddingLeft: '16px' }}>
-                        {['XLSX', 'PDF', 'HTML', 'XML', 'JSON', 'CSV', 'TSV'].map((format) => (
-                          <div
-                            key={format}
-                            onClick={() => { exportData(format.toLowerCase()); setShowOptionsDropdown(false); setShowExportDropdown(false); }}
-                            style={{ padding: '4px 20px', cursor: 'pointer', fontSize: '12px' }}
-                          >
-                            {format}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Member Search Results */}
-                {memberSearched ? (
-                  memberSearchResults.length > 0 ? (
-                    <>
-                      <div style={{
-                        fontSize: '14px',
-                        color: '#475569',
-                        marginBottom: '12px',
-                        padding: '8px 12px',
-                        background: '#e0f2fe',
-                        borderRadius: '6px',
-                      }}>
-                        मिले: {memberSearchResults.length} सदस्य
-                      </div>
-                      <div>
-                        {Object.keys(
-                          memberSearchResults
-                            .filter((m) => !m.isHead)
-                            .reduce((acc: any, m: any) => {
-                              const fid = m.familyID ? m.familyID.toString().trim() : '';
-                              if (fid) {
-                                if (!acc[fid]) acc[fid] = [];
-                                acc[fid].push(m);
-                              }
-                              return acc;
-                            }, {})
-                        ).map((fid) => {
-                          const familyMembers = memberSearchResults.filter((m) => m.familyID === fid && !m.isHead);
-                          return (
-                            <div
-                              key={fid}
-                              style={{
-                                marginBottom: '12px',
-                                border: '1px solid #e2e8f0',
-                                borderRadius: '8px',
-                                overflow: 'hidden',
-                              }}
-                            >
-                              <div
-                                style={{
-                                  background: '#0891b2',
-                                  color: 'white',
-                                  padding: '6px 12px',
-                                  fontWeight: 'bold',
-                                  fontSize: '13px',
-                                }}
-                              >
-                                🏠 Family ID: {fid} ({familyMembers.length} सदस्य)
-                              </div>
-                              <div style={{ padding: '8px 12px' }}>
-                                {familyMembers.map((m: any, idx: number) => (
-                                  <div
-                                    key={idx}
-                                    onClick={() => setSelectedMember(m)}
-                                    style={{
-                                      padding: '6px 10px',
-                                      borderBottom: idx !== familyMembers.length - 1 ? '1px solid #e2e8f0' : 'none',
-                                      background: idx % 2 === 0 ? '#fafafa' : 'white',
-                                      cursor: 'pointer',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '10px',
-                                      fontSize: '14px',
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.background = '#e0f2fe'}
-                                    onMouseLeave={(e) => e.currentTarget.style.background = idx % 2 === 0 ? '#fafafa' : 'white'}
-                                  >
-                                    <span style={{ color: '#94a3b8', fontSize: '12px' }}>
-                                      {m.memberNo || idx + 1}.
-                                    </span>
-                                    <span>{formatMemberDisplay(m)}</span>
-                                    {m.villageCity && (
-                                      <span style={{ fontSize: '12px', color: '#64748b' }}>
-                                        📍 {m.villageCity}
-                                      </span>
-                                    )}
-                                    {m.gotra && (
-                                      <span style={{ fontSize: '12px', color: '#64748b' }}>
-                                        🧬 {m.gotra}
-                                      </span>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </>
-                  ) : (
-                    <div style={{
-                      padding: '20px',
-                      textAlign: 'center',
-                      color: '#64748b',
-                    }}>
-                      कोई सदस्य नहीं मिला
-                    </div>
-                  )
-                ) : (
-                  <div style={{
-                    padding: '20px',
-                    textAlign: 'center',
-                    color: '#94a3b8',
-                    fontSize: '14px',
-                  }}>
-                    सर्च करने के लिए 🔍 बटन पर क्लिक करें
-                  </div>
-                )}
-              </div>
-            )}
+          <div
+            style={{
+              maxWidth: '500px',
+              width: '100%',
+              position: 'relative',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              background: 'transparent',
+              padding: '0 4px',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <AddMemberToFamily onClose={() => setIsMemberFormOpen(false)} />
           </div>
         </div>
+      )}
 
-        <hr style={{ margin: '35px 0', borderColor: '#e2e8f0' }} />
-
-        {/* =========================================================
-            SECTION 24: POPUPS & MODALS
-        ========================================================= */}
-        {selectedMember && MemberDetailCard({ member: selectedMember, onClose: () => setSelectedMember(null) })}
-
-        {selectedHead && HeadDetailCard({ head: selectedHead, onClose: () => setSelectedHead(null) })}
-
-        {HeadEditModal()}
-        {MemberEditModal()}
-
-        {/* Family Form Modal */}
-        {isFamilyFormOpen && (
+      {/* Committee Form Modal */}
+      {isCommitteeFormOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 3000,
+            padding: '20px',
+          }}
+          onClick={() => setIsCommitteeFormOpen(false)}
+        >
           <div
             style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(0,0,0,0.5)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 3000,
-              padding: '20px',
+              maxWidth: '500px',
+              width: '100%',
+              position: 'relative',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              background: 'transparent',
+              padding: '0 4px',
             }}
-            onClick={() => setIsFamilyFormOpen(false)}
+            onClick={(e) => e.stopPropagation()}
           >
-            <div
-              style={{
-                maxWidth: '500px',
-                width: '100%',
-                position: 'relative',
-                maxHeight: '90vh',
-                overflowY: 'auto',
-                background: 'transparent',
-                padding: '0 4px',
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <AddFamilyHead onClose={() => setIsFamilyFormOpen(false)} />
-            </div>
+            <AddCommitteeMember onClose={() => setIsCommitteeFormOpen(false)} />
           </div>
-        )}
-
-        {/* Member Form Modal */}
-        {isMemberFormOpen && (
-          <div
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(0,0,0,0.5)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 3000,
-              padding: '20px',
-            }}
-            onClick={() => setIsMemberFormOpen(false)}
-          >
-            <div
-              style={{
-                maxWidth: '500px',
-                width: '100%',
-                position: 'relative',
-                maxHeight: '90vh',
-                overflowY: 'auto',
-                background: 'transparent',
-                padding: '0 4px',
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <AddMemberToFamily onClose={() => setIsMemberFormOpen(false)} />
-            </div>
-          </div>
-        )}
-
-        {/* Committee Form Modal */}
-        {isCommitteeFormOpen && (
-          <div
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(0,0,0,0.5)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 3000,
-              padding: '20px',
-            }}
-            onClick={() => setIsCommitteeFormOpen(false)}
-          >
-            <div
-              style={{
-                maxWidth: '500px',
-                width: '100%',
-                position: 'relative',
-                maxHeight: '90vh',
-                overflowY: 'auto',
-                background: 'transparent',
-                padding: '0 4px',
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <AddCommitteeMember onClose={() => setIsCommitteeFormOpen(false)} />
-            </div>
-          </div>
-        )}
-
-        {/* Committee Edit Modal */}
-        {isCommitteeEditModalOpen && committeeEditFormData && (
-          <div
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(0,0,0,0.5)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 2000,
-              padding: '20px',
-            }}
-            onClick={() => setIsCommitteeEditModalOpen(false)}
-          >
-            <div
-              style={{
-                background: 'white',
-                borderRadius: '16px',
-                padding: '25px',
-                maxWidth: '500px',
-                width: '100%',
-                maxHeight: '90vh',
-                overflowY: 'auto',
-                boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-                position: 'relative',
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={() => setIsCommitteeEditModalOpen(false)}
-                style={{
-                  position: 'absolute',
-                  top: '10px',
-                  right: '15px',
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '24px',
-                  cursor: 'pointer',
-                  color: '#64748b',
-                }}
-              >
-                ✕
-              </button>
-
-              <h2 style={{ margin: '0 0 20px 0', color: '#d97706', borderBottom: '2px solid #fde68a', paddingBottom: '10px' }}>
-                ✏️ पदाधिकारी एडिट करें
-              </h2>
-
-              <form onSubmit={handleCommitteeEditSubmit}>
-                <div style={{ marginBottom: '12px' }}>
-                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', color: '#334155' }}>
-                    पद <span style={{ color: 'red' }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="जैसे: अध्यक्ष, उपाध्यक्ष, सचिव..."
-                    value={committeeEditFormData.designation || ''}
-                    onChange={(e) => setCommitteeEditFormData({...committeeEditFormData, designation: e.target.value})}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '8px 10px',
-                      borderRadius: '6px',
-                      border: '1px solid #cbd5e1',
-                      boxSizing: 'border-box',
-                      fontSize: '13px',
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '12px' }}>
-                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', color: '#334155' }}>
-                    नाम <span style={{ color: 'red' }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="पूरा नाम"
-                    value={committeeEditFormData.name || ''}
-                    onChange={(e) => setCommitteeEditFormData({...committeeEditFormData, name: e.target.value})}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '8px 10px',
-                      borderRadius: '6px',
-                      border: '1px solid #cbd5e1',
-                      boxSizing: 'border-box',
-                      fontSize: '13px',
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '12px' }}>
-                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', color: '#334155' }}>
-                    गोत्र
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="गोत्र"
-                    value={committeeEditFormData.gotra || ''}
-                    onChange={(e) => setCommitteeEditFormData({...committeeEditFormData, gotra: e.target.value})}
-                    style={{
-                      width: '100%',
-                      padding: '8px 10px',
-                      borderRadius: '6px',
-                      border: '1px solid #cbd5e1',
-                      boxSizing: 'border-box',
-                      fontSize: '13px',
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '12px' }}>
-                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', color: '#334155' }}>
-                    📱 मोबाइल
-                  </label>
-                  <input
-                    type="tel"
-                    placeholder="10 अंक"
-                    value={committeeEditFormData.mobile || ''}
-                    onChange={(e) => setCommitteeEditFormData({...committeeEditFormData, mobile: e.target.value})}
-                    maxLength={10}
-                    style={{
-                      width: '100%',
-                      padding: '8px 10px',
-                      borderRadius: '6px',
-                      border: '1px solid #cbd5e1',
-                      boxSizing: 'border-box',
-                      fontSize: '13px',
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', color: '#334155' }}>
-                    कार्यकाल
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="जैसे: 2024-2026"
-                    value={committeeEditFormData.tenure || ''}
-                    onChange={(e) => setCommitteeEditFormData({...committeeEditFormData, tenure: e.target.value})}
-                    style={{
-                      width: '100%',
-                      padding: '8px 10px',
-                      borderRadius: '6px',
-                      border: '1px solid #cbd5e1',
-                      boxSizing: 'border-box',
-                      fontSize: '13px',
-                    }}
-                  />
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'center', borderTop: '1px solid #e2e8f0', paddingTop: '15px' }}>
-                  <button
-                    type="submit"
-                    style={{
-                      padding: '6px 20px',
-                      background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontWeight: 'bold',
-                      fontSize: '13px',
-                    }}
-                  >
-                    ✅ सबमिट
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Search Popups */}
-      {FamilySearchPopup()}
-      {MemberSearchPopup()}
-    </>
+      <FamilySearchPopup />
+      <MemberSearchPopup />
+    </div>
   );
-} 
+}
