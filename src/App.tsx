@@ -8,6 +8,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import AddFamilyHead from './AddFamilyHead';
 import AddMemberToFamily from './AddMemberToFamily';
 import AddCommitteeMember from './AddCommitteeMember';
+import logo from './assets/logo.svg';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -2123,7 +2124,16 @@ export default function App() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '40px', lineHeight: '1' }}>🏛️</span>
+          <img
+            src={logo}
+            alt="Chhipa Samaj Logo"
+            style={{
+              width: '62px',
+              height: '62px',
+              flexShrink: 0,
+              filter: 'drop-shadow(0 2px 8px rgba(102, 126, 234, 0.35))',
+            }}
+          />
           <div>
             <h1
               style={{
